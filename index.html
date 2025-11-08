@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eshtki</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Font Awesome for icons (includes fa-brands for WhatsApp) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', 'Cairo', sans-serif;
+            background-color: #f8fafc;
+            /* Tailwind 'slate-50' */
+        }
+
+        /* Fix for Leaflet map height */
+        #map,
+        #submit-map,
+        #detail-map {
+            height: 300px;
+            width: 100%;
+            border-radius: 0.75rem;
+            /* rounded-xl */
+            z-index: 10;
+        }
+
+        #submit-map {
+            cursor: crosshair;
+        }
+
+        /* RTL support for Tailwind */
+        html[dir="rtl"] {
+            direction: rtl;
+        }
+
+        /* Simple loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #0d9488;
+            /* Tailwind 'teal-600' */
+            animation: spin 1s ease infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Custom class for active sort/view buttons */
+        .btn-active {
+            background-color: white;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            color: #0d9488;
+            /* teal-600 */
+        }
+    </style>
+</head>
+
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 space-y-2"></div>
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white/90 backdrop-blur-sm shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-bullhorn text-2xl text-teal-600 ml-2"></i>
+                    <span class="font-bold text-xl text-slate-800">Eshtki</span>
+                </div>
+                <div id="nav-links" class="hidden md:flex items-center gap-4">
+                    <!-- Nav links injected by JS -->
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-8">
+
+        <!-- Login Page -->
+        <section id="login-page" class="page hidden">
+            <div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-xl">
+                <h2 class="text-2xl font-bold text-center mb-6">تسجيل الدخول</h2>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-slate-700">البريد
+                            الإلكتروني</label>
+                        <input type="email" id="login-email" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-slate-700">كلمة المرور</label>
+                        <input type="password" id="login-password" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                    </div>
+                    <p id="login-error" class="text-red-500 text-sm hidden"></p>
+                    <button type="submit"
+                        class="w-full bg-teal-600 text-white py-2 px-4 rounded-lg shadow-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition duration-200 transform hover:scale-105">
+                        دخول
+                    </button>
+                </form>
+                <p class="text-center text-sm text-slate-600 mt-4">
+                    ليس لديك حساب؟ <a href="#register"
+                        class="font-medium text-teal-600 hover:text-teal-500 page-link">إنشاء حساب جديد</a>
+                </p>
+            </div>
+        </section>
+
+        <!-- Registration Page -->
+        <section id="register-page" class="page hidden">
+            <div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-xl">
+                <h2 class="text-2xl font-bold text-center mb-6">إنشاء حساب جديد</h2>
+                <form id="register-form" class="space-y-4">
+                    <div>
+                        <label for="reg-name" class="block text-sm font-medium text-slate-700">الاسم الرباعي (كما في
+                            البطاقة - باللغة العربية)</label>
+                        <input type="text" id="reg-name" required pattern="^[\u0621-\u064A\s]{4,}$"
+                            title="الرجاء إدخال اسم رباعي باللغة العربية"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                    </div>
+                    <div>
+                        <label for="reg-nid" class="block text-sm font-medium text-slate-700">الرقم القومي (14
+                            رقم)</label>
+                        <input type="text" id="reg-nid" required maxlength="14" pattern="\d{14}"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                        <p id="nid-error" class="text-red-500 text-sm hidden"></p>
+                        <p id="nid-success" class="text-green-500 text-sm hidden"></p>
+                    </div>
+
+                    <!-- NEW: WhatsApp Verification UI -->
+                    <div>
+                        <label for="reg-phone" class="block text-sm font-medium text-slate-700">رقم الهاتف (لتأكيد
+                            واتساب)</label>
+                        <div class="flex gap-2 mt-1">
+                            <input type="tel" id="reg-phone" required
+                                class="flex-grow block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                                placeholder="e.g. 01001234567">
+                            <button type="button" id="send-whatsapp-btn"
+                                class="flex-shrink-0 bg-green-500 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-green-600 transition transform hover:scale-105">
+                                <i class="fa-brands fa-whatsapp ml-1"></i>
+                                إرسال
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="whatsapp-code-group" class="space-y-2 hidden">
+                        <label for="reg-whatsapp-code" class="block text-sm font-medium text-slate-700">كود التحقق من
+                            واتساب</label>
+                        <input type="text" id="reg-whatsapp-code"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                            placeholder="ادخل الكود المكون من 6 أرقام">
+                        <p class="text-xs text-slate-500">تم إرسال الكود. الرجاء إدخاله هنا.</p>
+                        <p class="text-xs text-teal-500">(للتجربة: استخدم الكود 00000)</p>
+                    </div>
+                    <!-- End WhatsApp UI -->
+
+                    <div>
+                        <label for="reg-email" class="block text-sm font-medium text-slate-700">البريد
+                            الإلكتروني</label>
+                        <input type="email" id="reg-email" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                    </div>
+                    <div>
+                        <label for="reg-password" class="block text-sm font-medium text-slate-700">كلمة المرور</label>
+                        <input type="password" id="reg-password" required minlength="6"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                    </div>
+
+                    <p id="register-error" class="text-red-500 text-sm hidden"></p>
+
+                    <button type="submit" id="register-submit-btn"
+                        class="w-full bg-teal-600 text-white py-2 px-4 rounded-lg shadow-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition duration-200 transform hover:scale-105">
+                        تسجيل
+                    </button>
+                </form>
+                <p class="text-center text-sm text-slate-600 mt-4">
+                    لديك حساب بالفعل؟ <a href="#login"
+                        class="font-medium text-teal-600 hover:text-teal-500 page-link">تسجيل الدخول</a>
+                </p>
+            </div>
+        </section>
+
+        <!-- Main Feed Page -->
+        <section id="main-page" class="page hidden">
+            <!-- Filters and View Toggles -->
+            <div
+                class="mb-6 bg-white p-4 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex flex-wrap gap-4">
+                    <!-- Category Filter -->
+                    <select id="category-filter"
+                        class="border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                        <option value="all">كل الفئات</option>
+                        <option value="traffic">المرور والطرق</option>
+                        <option value="noise">الضوضاء والإزعاج</option>
+                        <option value="cleanliness">النظافة العامة</option>
+                        <option value="services">الخدمات الحكومية</option>
+                        <option value="environment">البيئة والصحة</option>
+                        <option value="safety">الأمن والأمان</option>
+                    </select>
+
+                    <!-- NEW: Sort Buttons -->
+                    <div class="flex bg-slate-100 p-1 rounded-lg">
+                        <button id="sort-newest-btn" data-sort="newest"
+                            class="sort-btn btn-active px-4 py-1.5 rounded-md text-sm font-medium">الأحدث</button>
+                        <button id="sort-hot-btn" data-sort="hot"
+                            class="sort-btn px-4 py-1.5 rounded-md text-sm font-medium text-slate-600">الأكثر
+                            تفاعلاً</button>
+                    </div>
+                </div>
+
+                <!-- View Toggle -->
+                <div class="flex bg-slate-100 p-1 rounded-lg">
+                    <button id="feed-view-btn" class="view-btn btn-active px-4 py-1.5 rounded-md text-sm"><i
+                            class="fa-solid fa-list mr-2"></i>عرض كقائمة</button>
+                    <button id="map-view-btn" class="view-btn px-4 py-1.5 rounded-md text-sm text-slate-600"><i
+                            class="fa-solid fa-map mr-2"></i>عرض على
+                        الخريطة</button>
+                </div>
+            </div>
+
+            <!-- Feed View -->
+            <div id="feed-view">
+                <div id="complaints-feed" class="space-y-6">
+                    <!-- Complaints injected by JS -->
+                </div>
+            </div>
+
+            <!-- Map View -->
+            <div id="map-view" class="hidden">
+                <div id="map" class="rounded-xl shadow-lg"></div>
+            </div>
+
+            <!-- Add Complaint Button -->
+            <button id="show-submit-form-btn"
+                class="fixed bottom-8 right-8 bg-teal-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-3xl hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 z-30 transition transform hover:scale-110">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </section>
+
+        <!-- Submit Complaint Page -->
+        <section id="submit-complaint-page" class="page hidden">
+            <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-6">تقديم شكوى جديدة</h2>
+                <form id="submit-complaint-form" class="space-y-4">
+                    <button type="button" class="page-link text-teal-600 hover:text-teal-800" data-target="main">
+                        <i class="fa-solid fa-arrow-right ml-2"></i> العودة للرئيسية
+                    </button>
+
+                    <div>
+                        <label for="complaint-category" class="block text-sm font-medium text-slate-700">الفئة</label>
+                        <select id="complaint-category" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                            <option value="" disabled selected>اختر فئة...</option>
+                            <option value="traffic">المرور والطرق</option>
+                            <option value="noise">الضوضاء والإزعاج</option>
+                            <option value="cleanliness">النظافة العامة</option>
+                            <option value="services">الخدمات الحكومية</option>
+                            <option value="environment">البيئة والصحة</option>
+                            <option value="safety">الأمن والأمان</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="complaint-description" class="block text-sm font-medium text-slate-700">وصف
+                            الشكوى</label>
+                        <textarea id="complaint-description" rows="4" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                            placeholder="اكتب تفاصيل المشكلة هنا..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700">الموقع</label>
+                        <p class="text-sm text-slate-500">انقر على الخريطة لتحديد موقع الشكوى بدقة.</p>
+                        <div id="submit-map" class="mt-2"></div>
+                        <input type="hidden" id="complaint-lat">
+                        <input type="hidden" id="complaint-lng">
+                        <p id="location-coords" class="text-sm text-green-600 mt-1 hidden"></p>
+                    </div>
+
+                    <div>
+                        <label for="complaint-image-url" class="block text-sm font-medium text-slate-700">رابط صورة
+                            (اختياري)</label>
+                        <input type="url" id="complaint-image-url"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                            placeholder="https://example.com/image.jpg">
+                    </div>
+
+                    <div>
+                        <label for="complaint-video-url" class="block text-sm font-medium text-slate-700">رابط فيديو
+                            (اختياري)</label>
+                        <input type="url" id="complaint-video-url"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                            placeholder="https://youtube.com/watch?v=...">
+                    </div>
+
+                    <div class="flex items-center">
+                        <input id="complaint-anonymous" type="checkbox"
+                            class="h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
+                        <label for="complaint-anonymous" class="ml-2 block text-sm text-slate-900">نشر الشكوى كمستخدم
+                            مجهول</label>
+                    </div>
+                    <p class="text-xs text-slate-500">ملاحظة: حتى لو اخترت النشر كمجهول، ستظل هويتك الحقيقية معروفة
+                        لإدارة الموقع للتحقق من المصداقية.</p>
+
+                    <p id="submit-complaint-error" class="text-red-500 text-sm hidden"></p>
+                    <button type="submit" id="submit-complaint-btn"
+                        class="w-full bg-teal-600 text-white py-2 px-4 rounded-lg shadow-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition transform hover:scale-105">
+                        إرسال الشكوى
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Complaint Detail Page -->
+        <section id="complaint-detail-page" class="page hidden">
+            <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <button type="button" class="page-link text-teal-600 hover:text-teal-800 mb-4" data-target="main">
+                    <i class="fa-solid fa-arrow-right ml-2"></i> العودة للرئيسية
+                </button>
+
+                <!-- Complaint Content -->
+                <div id="complaint-detail-content">
+                    <!-- Injected by JS -->
+                </div>
+
+                <!-- Complaint Media -->
+                <div id="complaint-media" class="mt-4 space-y-2">
+                    <!-- Injected by JS -->
+                </div>
+
+                <!-- Complaint Map -->
+                <h3 class="text-xl font-bold mb-2 mt-6 pt-4 border-t border-gray-200">موقع الشكوى</h3>
+                <div id="detail-map" class="rounded-xl"></div>
+
+                <!-- Voting Section -->
+                <div class="my-6 border-t border-b py-4">
+                    <h3 class="text-lg font-semibold mb-3">هل توافق على أن هذه مشكلة حقيقية؟</h3>
+                    <div class="flex space-rtl-4">
+                        <button id="upvote-btn"
+                            class="flex items-center gap-2 text-slate-600 hover:text-green-600 px-4 py-2 rounded-lg border border-gray-300 hover:border-green-500 transition transform hover:scale-105">
+                            <i class="fa-solid fa-thumbs-up"></i>
+                            <span>أوافق</span>
+                            (<span id="upvote-count">0</span>)
+                        </button>
+                        <button id="downvote-btn"
+                            class="flex items-center gap-2 text-slate-600 hover:text-red-600 px-4 py-2 rounded-lg border border-gray-300 hover:border-red-500 transition transform hover:scale-105">
+                            <i class="fa-solid fa-thumbs-down"></i>
+                            <span>لا أوافق</span>
+                            (<span id="downvote-count">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- NEW: Comment Section - Visible by default, form is hidden -->
+                <div id="comment-section" class="">
+                    <h3 class="text-xl font-bold mb-4">التعليقات</h3>
+
+                    <!-- Message shown if not voted -->
+                    <p id="vote-message" class="text-sm text-teal-600 mb-4 p-3 bg-teal-50 rounded-lg hidden">
+                        <i class="fa-solid fa-lock ml-2"></i>
+                        يجب أن تصوت أولاً (أوافق / لا أوافق) قبل أن تتمكن من إضافة تعليق.
+                    </p>
+
+                    <!-- Form is hidden until user votes -->
+                    <form id="comment-form" class="mb-6 hidden">
+                        <label for="comment-text" class="block text-sm font-medium text-slate-700">أضف تعليقك</label>
+                        <textarea id="comment-text" rows="3" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                            placeholder="اكتب تعليقك هنا..."></textarea>
+                        <button type="submit" id="submit-comment-btn"
+                            class="mt-2 bg-teal-600 text-white py-2 px-4 rounded-lg shadow-sm hover:bg-teal-700 transition transform hover:scale-105">
+                            إضافة تعليق
+                        </button>
+                    </form>
+
+                    <!-- Comment list is always visible -->
+                    <div id="comments-list" class="space-y-4">
+                        <!-- Comments injected by JS -->
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import {
+            getAuth,
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+            signOut,
+            onAuthStateChanged,
+            updateProfile
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import {
+            getFirestore,
+            collection,
+            addDoc,
+            doc,
+            setDoc,
+            getDoc,
+            getDocs,
+            onSnapshot,
+            query,
+            where,
+            orderBy,
+            serverTimestamp,
+            writeBatch,
+            runTransaction
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ========================================================================
+        // Firebase Config (Using provided config)
+        // ========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDhPtsA0Om6IZnfMJlBQfmmk48Aux6efls",
+            authDomain: "eshtki-app.firebaseapp.com",
+            projectId: "eshtki-app",
+            storageBucket: "eshtki-app.firebasestorage.app",
+            messagingSenderId: "882576436757",
+            appId: "1:882576436757:web:ec341311af5eb07fee681c",
+            measurementId: "G-B4QC9GW3F2"
+        };
+        // ========================================================================
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Global state
+        let currentUser = null;
+        let currentComplaintId = null;
+        let mainMap = null;
+        let submitMap = null;
+        let detailMap = null;
+        let submitMarker = null;
+        let detailMarker = null;
+        let complaintMarkers = {};
+        let complaintListeners = []; // To unsubscribe from listeners
+        let currentSort = 'newest'; // NEW: Sorting state
+
+        // DOM Elements
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const toastContainer = document.getElementById('toast-container');
+        const navLinks = document.getElementById('nav-links');
+        const pages = document.querySelectorAll('.page');
+
+        // Auth
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const regNidInput = document.getElementById('reg-nid');
+        const nidError = document.getElementById('nid-error');
+        const nidSuccess = document.getElementById('nid-success');
+        const regPhoneInput = document.getElementById('reg-phone'); // NEW
+        const sendWhatsappBtn = document.getElementById('send-whatsapp-btn'); // NEW
+        const whatsappCodeGroup = document.getElementById('whatsapp-code-group'); // NEW
+        const registerSubmitBtn = document.getElementById('register-submit-btn'); // NEW
+
+        // Main Page
+        const feedViewBtn = document.getElementById('feed-view-btn');
+        const mapViewBtn = document.getElementById('map-view-btn');
+        const viewBtns = document.querySelectorAll('.view-btn'); // NEW
+        const feedView = document.getElementById('feed-view');
+        const mapView = document.getElementById('map-view');
+        const complaintsFeed = document.getElementById('complaints-feed');
+        const categoryFilter = document.getElementById('category-filter');
+        const sortNewestBtn = document.getElementById('sort-newest-btn'); // NEW
+        const sortHotBtn = document.getElementById('sort-hot-btn'); // NEW
+        const sortBtns = document.querySelectorAll('.sort-btn'); // NEW
+
+        // Submit Page
+        const showSubmitFormBtn = document.getElementById('show-submit-form-btn');
+        const submitComplaintForm = document.getElementById('submit-complaint-form');
+        const complaintLat = document.getElementById('complaint-lat');
+        const complaintLng = document.getElementById('complaint-lng');
+        const locationCoords = document.getElementById('location-coords');
+        const complaintImageUrl = document.getElementById('complaint-image-url');
+        const complaintVideoUrl = document.getElementById('complaint-video-url');
+
+        // Detail Page
+        const complaintDetailContent = document.getElementById('complaint-detail-content');
+        const complaintMedia = document.getElementById('complaint-media');
+        const upvoteBtn = document.getElementById('upvote-btn');
+        const downvoteBtn = document.getElementById('downvote-btn');
+        const upvoteCount = document.getElementById('upvote-count');
+        const downvoteCount = document.getElementById('downvote-count');
+        const voteMessage = document.getElementById('vote-message');
+        const commentSection = document.getElementById('comment-section');
+        const commentForm = document.getElementById('comment-form');
+        const commentsList = document.getElementById('comments-list');
+
+        // --- Utility Functions ---
+
+        function showLoading() { loadingOverlay.classList.remove('hidden'); }
+        function hideLoading() { loadingOverlay.classList.add('hidden'); }
+
+        function showToast(message, isError = false) {
+            const toast = document.createElement('div');
+            const icon = isError ? 'fa-solid fa-circle-xmark' : 'fa-solid fa-circle-check';
+            const bgColor = isError ? 'bg-red-500' : 'bg-green-500';
+
+            toast.className = `flex items-center gap-3 p-4 rounded-lg shadow-lg text-white ${bgColor} transform transition-all duration-300 ease-in-out translate-x-full opacity-0`;
+            toast.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
+
+            toastContainer.appendChild(toast);
+
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 10);
+
+            // Animate out
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+
+        // --- Page/Routing ---
+
+        function showPage(pageId) {
+            pages.forEach(page => page.classList.add('hidden'));
+            const activePage = document.getElementById(`${pageId}-page`);
+            if (activePage) {
+                activePage.classList.remove('hidden');
+
+                // Special actions on page show
+                if (pageId === 'main') {
+                    showSubmitFormBtn.classList.remove('hidden');
+                    if (!mainMap) {
+                        initMainMap();
+                    }
+                    setTimeout(() => {
+                        if (mainMap) mainMap.invalidateSize();
+                    }, 300);
+                    fetchComplaints(); // Re-fetch complaints
+                } else {
+                    showSubmitFormBtn.classList.add('hidden');
+                }
+
+                if (pageId === 'submit-complaint') {
+                    if (!submitMap) {
+                        initSubmitMap();
+                    }
+                    setTimeout(() => {
+                        if (submitMap) submitMap.invalidateSize();
+                    }, 300);
+                    if (submitMarker) submitMarker.remove();
+                    submitMarker = null;
+                    locationCoords.classList.add('hidden');
+                    complaintLat.value = '';
+                    complaintLng.value = '';
+                }
+
+                if (pageId === 'complaint-detail') {
+                    fetchComplaintDetails();
+                }
+            }
+        }
+
+        function handleHashChange() {
+            const hash = window.location.hash.substring(1) || 'login';
+            if (currentUser) {
+                const allowedPages = ['main', 'submit-complaint', 'complaint-detail'];
+                if (allowedPages.includes(hash)) {
+                    if (hash === 'complaint-detail' && !currentComplaintId) {
+                        showPage('main');
+                    } else {
+                        showPage(hash);
+                    }
+                } else {
+                    window.location.hash = 'main';
+                    showPage('main');
+                }
+            } else {
+                const allowedPages = ['login', 'register'];
+                if (allowedPages.includes(hash)) {
+                    showPage(hash);
+                } else {
+                    window.location.hash = 'login';
+                    showPage('login');
+                }
+            }
+        }
+
+        document.body.addEventListener('click', (e) => {
+            let target = e.target.closest('.page-link');
+            if (target) {
+                e.preventDefault();
+                const targetPage = target.getAttribute('href') || target.dataset.target;
+
+                if (targetPage === '#complaint-detail') {
+                    currentComplaintId = target.dataset.id;
+                    window.location.hash = `complaint-detail`;
+                } else {
+                    window.location.hash = targetPage.replace('#', '');
+                }
+            }
+        });
+
+        // --- Authentication ---
+
+        // NEW: Modified onAuthStateChanged to fetch user doc for full name
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                console.log("User logged in:", user.uid);
+
+                // Fetch user doc to get full name
+                const userDocRef = doc(db, 'users', user.uid);
+                getDoc(userDocRef).then(docSnap => {
+                    let fullName = user.displayName || user.email; // Fallback
+                    if (docSnap.exists() && docSnap.data().fullName) {
+                        fullName = docSnap.data().fullName; // Use Firestore name
+                    }
+
+                    // NOW update the nav with the correct name
+                    updateNav(user, fullName); // Pass the fetched name
+
+                    if (!docSnap.exists()) {
+                        console.error("User doc not found!");
+                        signOut(auth);
+                    } else {
+                        // All good, go to main page
+                        if (window.location.hash === '#login' || window.location.hash === '#register' || window.location.hash === '') {
+                            window.location.hash = 'main';
+                        }
+                        handleHashChange(); // Handle hash change AFTER name is fetched
+                    }
+                }).catch(err => {
+                    // Handle error, maybe just use default name
+                    console.error("Error fetching user doc:", err);
+                    updateNav(user, user.displayName || user.email); // Fallback
+                    handleHashChange();
+                });
+            } else {
+                currentUser = null;
+                console.log("User logged out");
+                updateNav(null); // No user, no name
+                currentComplaintId = null;
+                cleanupListeners(); // Unsubscribe from listeners on logout
+                window.location.hash = 'login';
+                handleHashChange(); // Handle hash change on auth state
+            }
+        });
+
+        // NEW: Modified updateNav to accept fullName
+        function updateNav(user, fullName) {
+            navLinks.innerHTML = '';
+            if (user) {
+                const nameToShow = fullName || user.email; // Use the passed fullName
+                navLinks.innerHTML = `
+                    <span class="text-slate-700 font-medium">مرحباً، ${nameToShow}</span>
+                    <a href="#main" class="page-link text-slate-700 hover:text-teal-600">الرئيسية</a>
+                    <button id="logout-btn" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-medium hover:bg-red-600 transition transform hover:scale-105">خروج</button>
+                `;
+                document.getElementById('logout-btn').addEventListener('click', () => {
+                    signOut(auth);
+                });
+            } else {
+                navLinks.innerHTML = `
+                    <a href="#login" class="page-link text-slate-700 hover:text-teal-600">دخول</a>
+                    <a href="#register" class="page-link text-teal-600 bg-teal-100 px-3 py-1 rounded-lg text-sm font-medium hover:bg-teal-200">إنشاء حساب</a>
+                `;
+            }
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error');
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                errorEl.classList.add('hidden');
+            } catch (error) {
+                console.error("Login error:", error.message);
+                errorEl.textContent = "فشل تسجيل الدخول. تأكد من البريد الإلكتروني وكلمة المرور.";
+                errorEl.classList.remove('hidden');
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // NEW: WhatsApp UI Simulation with bypass
+        sendWhatsappBtn.addEventListener('click', () => {
+            const phone = regPhoneInput.value;
+            // Simple validation (e.g., Egyptian number)
+            if (!/^(010|011|012|015)\d{8}$/.test(phone)) {
+                showToast("الرجاء إدخال رقم هاتف مصري صحيح.", true);
+                return;
+            }
+
+            // --- SIMULATION ---
+            // In a real app, you would call your backend API here to send a WhatsApp OTP.
+            // e.g., await fetch('/api/send-whatsapp-otp', { method: 'POST', body: JSON.stringify({ phone }) });
+            // For now, we just simulate the success.
+
+            console.log("Simulating WhatsApp code send to:", phone);
+            showLoading();
+            sendWhatsappBtn.disabled = true;
+            regPhoneInput.disabled = true;
+
+            setTimeout(() => {
+                hideLoading();
+                whatsappCodeGroup.classList.remove('hidden');
+                registerSubmitBtn.disabled = false; // Enable submit after "sending" code
+                showToast("تم إرسال كود التحقق إلى واتساب بنجاح.");
+                showToast("للتجربة: استخدم الكود 00000", false);
+            }, 1500); // Simulate network delay
+        });
+
+
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading();
+            const name = document.getElementById('reg-name').value;
+            const nid = document.getElementById('reg-nid').value;
+            const phone = document.getElementById('reg-phone').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const errorEl = document.getElementById('register-error');
+
+            // NEW: WhatsApp verification bypass - accept "00000" as valid
+            const whatsappCode = document.getElementById('reg-whatsapp-code').value;
+            if (whatsappCode !== "00000") {
+                errorEl.textContent = "كود التحقق غير صحيح. استخدم 00000 للتجربة.";
+                errorEl.classList.remove('hidden');
+                hideLoading();
+                return;
+            }
+
+            const nidValidation = validateNationalID(nid);
+            if (!nidValidation.valid) {
+                errorEl.textContent = `الرقم القومي غير صالح: ${nidValidation.error}`;
+                errorEl.classList.remove('hidden');
+                hideLoading();
+                return;
+            }
+
+            try {
+                // 1. Create user in Auth
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // 2. Update Auth profile (display name)
+                await updateProfile(user, { displayName: name });
+
+                // 3. Create user document in Firestore
+                await setDoc(doc(db, "users", user.uid), {
+                    uid: user.uid,
+                    fullName: name,
+                    nationalID: nid,
+                    phone: phone,
+                    email: email,
+                    createdAt: serverTimestamp(),
+                    birthDate: nidValidation.data.birthDate.toISOString(),
+                    governorate: nidValidation.data.governorate
+                });
+
+                console.log("User registered and data stored.");
+                errorEl.classList.add('hidden');
+            } catch (error) {
+                console.error("Registration error:", error.message);
+                if (error.code === 'auth/email-already-in-use') {
+                    errorEl.textContent = "هذا البريد الإلكتروني مسجل بالفعل.";
+                } else {
+                    errorEl.textContent = "فشل التسجيل. " + error.message;
+                }
+                errorEl.classList.remove('hidden');
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // --- National ID Validator ---
+        regNidInput.addEventListener('input', (e) => {
+            const nid = e.target.value;
+            nidError.classList.add('hidden');
+            nidSuccess.classList.add('hidden');
+
+            if (nid.length === 14) {
+                const result = validateNationalID(nid);
+                if (result.valid) {
+                    nidSuccess.textContent = `صالح. تاريخ الميلاد: ${result.data.birthDate.toLocaleDateString('ar-EG')}, المحافظة: ${result.data.governorate}`;
+                    nidSuccess.classList.remove('hidden');
+                } else {
+                    nidError.textContent = result.error;
+                    nidError.classList.remove('hidden');
+                }
+            }
+        });
+
+        function validateNationalID(nid) {
+            if (!/^\d{14}$/.test(nid)) {
+                return { valid: false, error: "الرقم القومي يجب أن يتكون من 14 رقم." };
+            }
+
+            const centuryDigit = parseInt(nid[0]);
+            const year = parseInt(nid[1] + nid[2]);
+            const month = parseInt(nid[3] + nid[4]);
+            const day = parseInt(nid[5] + nid[6]);
+            const govCode = parseInt(nid[7] + nid[8]);
+
+            let fullYear;
+            if (centuryDigit === 2) fullYear = 1900 + year;
+            else if (centuryDigit === 3) fullYear = 2000 + year;
+            else return { valid: false, error: "رقم القرن (الرقم الأول) غير صالح." };
+
+            const birthDate = new Date(fullYear, month - 1, day);
+            if (birthDate.getFullYear() !== fullYear || birthDate.getMonth() + 1 !== month || birthDate.getDate() !== day) {
+                return { valid: false, error: "تاريخ الميلاد غير صالح." };
+            }
+
+            const governorates = {
+                1: "القاهرة", 2: "الإسكندرية", 3: "بورسعيد", 4: "السويس", 11: "دمياط",
+                12: "الدقهلية", 13: "الشرقية", 14: "القليوبية", 15: "كفر الشيخ", 16: "الغربية",
+                17: "المنوفية", 18: "البحيرة", 19: "الإسماعيلية", 21: "الجيزة", 22: "بني سويف",
+                23: "الفيوم", 24: "المنيا", 25: "أسيوط", 26: "سوهاج", 27: "قنا", 28: "أسوان",
+                29: "الأقصر", 31: "البحر الأحمر", 32: "الوادي الجديد", 33: "مطروح", 34: "شمال سيناء",
+                35: "جنوب سيناء", 88: "خارج الجمهورية"
+            };
+            const govName = governorates[govCode];
+            if (!govName) {
+                return { valid: false, error: "كود المحافظة (الرقم 8 و 9) غير صالح." };
+            }
+
+            return { valid: true, data: { birthDate: birthDate, governorate: govName } };
+        }
+
+        // --- Maps ---
+
+        function initMainMap() {
+            if (mainMap) mainMap.remove();
+            mainMap = L.map('map').setView([30.0444, 31.2357], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(mainMap);
+        }
+
+        function initSubmitMap() {
+            if (submitMap) submitMap.remove();
+            submitMap = L.map('submit-map').setView([30.0444, 31.2357], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(submitMap);
+
+            submitMap.on('click', (e) => {
+                const { lat, lng } = e.latlng;
+                complaintLat.value = lat;
+                complaintLng.value = lng;
+                locationCoords.textContent = `الموقع المحدد: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                locationCoords.classList.remove('hidden');
+
+                if (submitMarker) {
+                    submitMarker.setLatLng(e.latlng);
+                } else {
+                    submitMarker = L.marker(e.latlng).addTo(submitMap);
+                }
+                submitMarker.bindPopup("موقع الشكوى").openPopup();
+            });
+        }
+
+        function initDetailMap(location) {
+            if (detailMap) {
+                detailMap.remove();
+                detailMap = null;
+                detailMarker = null;
+            }
+            const mapContainer = document.getElementById('detail-map');
+            if (mapContainer.classList.contains('hidden')) {
+                mapContainer.classList.remove('hidden');
+            }
+
+            const { lat, lng } = location;
+            detailMap = L.map('detail-map').setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(detailMap);
+
+            detailMarker = L.marker([lat, lng]).addTo(detailMap);
+            detailMarker.bindPopup("موقع الشكوى").openPopup();
+
+            setTimeout(() => {
+                if (detailMap) {
+                    detailMap.invalidateSize();
+                }
+            }, 300);
+        }
+
+        function updateMainMapMarkers(complaints) {
+            if (!mainMap) return;
+
+            Object.values(complaintMarkers).forEach(marker => marker.remove());
+            complaintMarkers = {};
+
+            complaints.forEach(complaint => {
+                if (complaint.location) {
+                    const { lat, lng } = complaint.location;
+                    const marker = L.marker([lat, lng]).addTo(mainMap);
+                    marker.bindPopup(`
+                        <b>${getCategoryName(complaint.category)}</b>
+                        <p>${complaint.description.substring(0, 50)}...</p>
+                        <a href="#complaint-detail" class="page-link text-teal-600" data-id="${complaint.id}">عرض التفاصيل</a>
+                    `);
+                    complaintMarkers[complaint.id] = marker;
+                }
+            });
+        }
+
+        // --- View & Sort Toggles ---
+
+        viewBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                viewBtns.forEach(b => b.classList.remove('btn-active'));
+                btn.classList.add('btn-active');
+
+                if (btn.id === 'feed-view-btn') {
+                    feedView.classList.remove('hidden');
+                    mapView.classList.add('hidden');
+                } else {
+                    feedView.classList.add('hidden');
+                    mapView.classList.remove('hidden');
+                    if (mainMap) mainMap.invalidateSize();
+                }
+            });
+        });
+
+        sortBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                sortBtns.forEach(b => b.classList.remove('btn-active'));
+                btn.classList.add('btn-active');
+                currentSort = btn.dataset.sort;
+                fetchComplaints(); // Re-fetch/re-sort
+            });
+        });
+
+        // --- Complaints ---
+
+        function cleanupListeners() {
+            complaintListeners.forEach(unsubscribe => unsubscribe());
+            complaintListeners = [];
+            console.log("Cleaned up listeners");
+        }
+
+        function fetchComplaints() {
+            if (!currentUser) return;
+            cleanupListeners();
+            showLoading();
+
+            let complaintsQuery = collection(db, "complaints");
+            const category = categoryFilter.value;
+            if (category !== 'all') {
+                complaintsQuery = query(complaintsQuery, where("category", "==", category));
+            }
+
+            const unsubscribe = onSnapshot(complaintsQuery, (querySnapshot) => {
+                const complaints = [];
+                querySnapshot.forEach((doc) => {
+                    complaints.push({ id: doc.id, ...doc.data() });
+                });
+
+                // NEW: In-memory sorting based on currentSort state
+                if (currentSort === 'newest') {
+                    complaints.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
+                } else if (currentSort === 'hot') {
+                    complaints.sort((a, b) => {
+                        const scoreA = (a.upvotes || 0) - (a.downvotes || 0);
+                        const scoreB = (b.upvotes || 0) - (b.downvotes || 0);
+                        return scoreB - scoreA; // Highest score first
+                    });
+                }
+
+                renderComplaintsFeed(complaints);
+                updateMainMapMarkers(complaints);
+                hideLoading();
+            }, (error) => {
+                console.error("Error fetching complaints:", error);
+                hideLoading();
+                showToast("خطأ في تحميل الشكاوى.", true);
+            });
+
+            complaintListeners.push(unsubscribe);
+        }
+
+        categoryFilter.addEventListener('change', fetchComplaints);
+
+        function getCategoryName(key) {
+            const categories = {
+                traffic: "المرور والطرق", noise: "الضوضاء والإزعاج", cleanliness: "النظافة العامة",
+                services: "الخدمات الحكومية", environment: "البيئة والصحة", safety: "الأمن والأمان"
+            };
+            return categories[key] || "فئة غير معروفة";
+        }
+
+        function getCategoryIcon(key) {
+            const icons = {
+                traffic: "fa-car", noise: "fa-volume-high", cleanliness: "fa-trash",
+                services: "fa-building-columns", environment: "fa-leaf", safety: "fa-shield-halved"
+            };
+            return icons[key] || "fa-question";
+        }
+
+        // NEW: Updated social card render function
+        function renderComplaintsFeed(complaints) {
+            complaintsFeed.innerHTML = '';
+            if (complaints.length === 0) {
+                complaintsFeed.innerHTML = `<p class="text-center text-slate-500">لا توجد شكاوى تطابق هذا الفلتر.</p>`;
+                return;
+            }
+
+            complaints.forEach(complaint => {
+                const complaintCard = document.createElement('div');
+                complaintCard.className = "bg-white p-5 rounded-xl shadow-lg transition transform hover:shadow-xl";
+
+                const timeAgo = complaint.createdAt ? timeDifference(Date.now(), complaint.createdAt.toDate()) : 'منذ فترة';
+                const author = complaint.isAnonymous ? "مستخدم مجهول" : complaint.authorName || "مستخدم";
+
+                const upvotes = complaint.upvotes || 0;
+                const downvotes = complaint.downvotes || 0;
+                const score = upvotes - downvotes;
+                let scoreColor = 'text-slate-600';
+                if (score > 0) scoreColor = 'text-green-600';
+                if (score < 0) scoreColor = 'text-red-600';
+
+                complaintCard.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <!-- Author Info -->
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
+                                <i class="fa-solid ${getCategoryIcon(complaint.category)} text-teal-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-sm text-slate-800">${author}</span>
+                                <div class="flex items-center gap-2 text-xs text-slate-500">
+                                    <span>${getCategoryName(complaint.category)}</span>
+                                    <span>&middot;</span>
+                                    <span>${timeAgo}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Complaint Text -->
+                    <p class="mt-4 text-slate-700 leading-relaxed page-link cursor-pointer" data-target="#complaint-detail" data-id="${complaint.id}">
+                        ${complaint.description.substring(0, 200)}
+                        ${complaint.description.length > 200 ? '...' : ''}
+                    </p>
+
+                    <!-- Media Preview (if image exists) -->
+                    ${complaint.imageUrl ? `
+                        <div class="mt-4 rounded-lg overflow-hidden border border-gray-200">
+                            <img src="${complaint.imageUrl}" alt="صورة الشكوى" class="w-full h-auto object-cover max-h-64" onerror="this.style.display='none'">
+                        </div>
+                    ` : ''}
+
+                    <!-- Action Bar: Votes & Comments -->
+                    <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-100">
+                        <div class="flex gap-4">
+                            <div class="flex items-center gap-2 text-slate-500">
+                                <i class="fa-solid fa-thumbs-up text-gray-400"></i>
+                                <span class="font-medium ${scoreColor} text-sm">${score}</span>
+                                <i class="fa-solid fa-thumbs-down text-gray-400"></i>
+                            </div>
+                            <a href="#complaint-detail" class="page-link flex items-center gap-2 text-slate-500 hover:text-teal-600" data-id="${complaint.id}">
+                                <i class="fa-solid fa-comment-dots"></i>
+                                <span class="text-sm font-medium">${complaint.commentCount || 0} تعليقات</span>
+                            </a>
+                        </div>
+                        <a href="#complaint-detail" class="page-link text-teal-600 hover:text-teal-800 text-sm font-semibold" data-id="${complaint.id}">
+                            عرض التفاصيل <i class="fa-solid fa-arrow-left mr-1"></i>
+                        </a>
+                    </div>
+                `;
+
+                // Add click listener to the whole card/text for navigation
+                complaintCard.querySelectorAll('.page-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation(); // Prevent multiple triggers
+                        currentComplaintId = complaint.id;
+                        window.location.hash = 'complaint-detail';
+                    });
+                });
+
+                complaintsFeed.appendChild(complaintCard);
+            });
+        }
+
+        function timeDifference(current, previous) {
+            const msPerMinute = 60 * 1000;
+            const msPerHour = msPerMinute * 60;
+            const msPerDay = msPerHour * 24;
+            const msPerMonth = msPerDay * 30;
+            const msPerYear = msPerDay * 365;
+            const elapsed = current - previous;
+            if (elapsed < msPerMinute) { return 'الآن'; }
+            else if (elapsed < msPerHour) { return 'منذ ' + Math.round(elapsed / msPerMinute) + ' د'; }
+            else if (elapsed < msPerDay) { return 'منذ ' + Math.round(elapsed / msPerHour) + ' س'; }
+            else if (elapsed < msPerMonth) { return 'منذ ' + Math.round(elapsed / msPerDay) + ' ي'; }
+            else if (elapsed < msPerYear) { return 'منذ ' + Math.round(elapsed / msPerMonth) + ' ش'; }
+            else { return 'منذ ' + Math.round(elapsed / msPerYear) + ' س'; }
+        }
+
+        showSubmitFormBtn.addEventListener('click', () => {
+            window.location.hash = 'submit-complaint';
+        });
+
+        submitComplaintForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+            if (!complaintLat.value || !complaintLng.value) {
+                document.getElementById('submit-complaint-error').textContent = 'الرجاء تحديد موقع على الخريطة.';
+                document.getElementById('submit-complaint-error').classList.remove('hidden');
+                return;
+            }
+
+            showLoading();
+            const submitBtn = document.getElementById('submit-complaint-btn');
+            submitBtn.disabled = true;
+
+            const category = document.getElementById('complaint-category').value;
+            const description = document.getElementById('complaint-description').value;
+            const isAnonymous = document.getElementById('complaint-anonymous').checked;
+            const imageUrl = complaintImageUrl.value || null;
+            const videoUrl = complaintVideoUrl.value || null;
+
+            try {
+                await addDoc(collection(db, "complaints"), {
+                    category: category,
+                    description: description,
+                    location: {
+                        lat: parseFloat(complaintLat.value),
+                        lng: parseFloat(complaintLng.value)
+                    },
+                    imageUrl: imageUrl,
+                    videoUrl: videoUrl,
+                    isAnonymous: isAnonymous,
+                    authorId: currentUser.uid,
+                    authorName: currentUser.displayName,
+                    createdAt: serverTimestamp(),
+                    upvotes: 0,
+                    downvotes: 0,
+                    voteMap: {},
+                    commentCount: 0
+                });
+
+                showToast("تم إرسال الشكوى بنجاح!");
+                submitComplaintForm.reset();
+                locationCoords.classList.add('hidden');
+                complaintImageUrl.value = '';
+                complaintVideoUrl.value = '';
+                if (submitMarker) submitMarker.remove();
+                submitMarker = null;
+
+                window.location.hash = 'main';
+
+            } catch (error) {
+                console.error("Error submitting complaint:", error);
+                document.getElementById('submit-complaint-error').textContent = 'حدث خطأ أثناء إرسال الشكوى.';
+                document.getElementById('submit-complaint-error').classList.remove('hidden');
+            } finally {
+                hideLoading();
+                submitBtn.disabled = false;
+            }
+        });
+
+        // --- Complaint Detail, Voting, Comments ---
+
+        async function fetchComplaintDetails() {
+            if (!currentComplaintId || !currentUser) {
+                window.location.hash = 'main';
+                return;
+            }
+
+            if (detailMap) {
+                detailMap.remove();
+                detailMap = null;
+                detailMarker = null;
+            }
+            showLoading();
+            cleanupListeners();
+
+            const complaintRef = doc(db, "complaints", currentComplaintId);
+
+            const unsubComplaint = onSnapshot(complaintRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const complaintData = docSnap.data();
+                    renderComplaintDetail(complaintData, docSnap.id);
+
+                    const mapContainer = document.getElementById('detail-map');
+                    if (complaintData.location && complaintData.location.lat && complaintData.location.lng) {
+                        mapContainer.classList.remove('hidden');
+                        initDetailMap(complaintData.location);
+                    } else {
+                        mapContainer.classList.add('hidden');
+                    }
+
+                    // NEW: updateVoteUI logic is updated
+                    updateVoteUI(complaintData.voteMap || {});
+                } else {
+                    console.error("Complaint not found");
+                    showToast("لم يتم العثور على الشكوى.", true);
+                    window.location.hash = 'main';
+                }
+                hideLoading();
+            }, (error) => {
+                console.error("Error fetching complaint details:", error);
+                hideLoading();
+            });
+
+            complaintListeners.push(unsubComplaint);
+
+            // Fetch comments
+            const commentsRef = collection(db, "complaints", currentComplaintId, "comments");
+            const commentsQuery = query(commentsRef, orderBy("createdAt", "asc"));
+
+            const unsubComments = onSnapshot(commentsQuery, (querySnapshot) => {
+                const comments = [];
+                querySnapshot.forEach((doc) => {
+                    comments.push({ id: doc.id, ...doc.data() });
+                });
+                renderComments(comments);
+            }, (error) => {
+                console.error("Error fetching comments:", error);
+            });
+
+            complaintListeners.push(unsubComments);
+        }
+
+        function renderComplaintDetail(complaint, id) {
+            const author = complaint.isAnonymous ? "مستخدم مجهول" : complaint.authorName;
+            const timeAgo = complaint.createdAt ? timeDifference(Date.now(), complaint.createdAt.toDate()) : 'منذ فترة';
+
+            complaintDetailContent.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <span class="px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm font-semibold">
+                        <i class="fa-solid ${getCategoryIcon(complaint.category)} ml-1"></i>
+                        ${getCategoryName(complaint.category)}
+                    </span>
+                    <span class="text-sm text-slate-500">${timeAgo}</span>
+                </div>
+                <p class="text-slate-800 my-4 text-lg leading-relaxed">${complaint.description}</p>
+                <div class="text-sm text-slate-600">بواسطة: ${author}</div>
+            `;
+
+            complaintMedia.innerHTML = '';
+            if (complaint.imageUrl || complaint.videoUrl) {
+                let mediaHTML = '<h3 class="text-lg font-semibold mb-2">المرفقات</h3>';
+                if (complaint.imageUrl) {
+                    mediaHTML += `
+                        <a href="${complaint.imageUrl}" target="_blank" class="block mb-2">
+                            <img src="${complaint.imageUrl}" alt="صورة مرفقة" class="rounded-lg border border-gray-200 max-w-full h-auto">
+                        </a>
+                    `;
+                }
+                if (complaint.videoUrl) {
+                    // Simple link for video
+                    mediaHTML += `
+                        <a href="${complaint.videoUrl}" target="_blank" class="flex items-center text-teal-600 hover:text-teal-800 text-sm font-medium">
+                            <i class="fa-solid fa-video ml-2"></i> رابط الفيديو المرفق
+                        </a>
+                    `;
+                }
+                complaintMedia.innerHTML = mediaHTML;
+            }
+
+            upvoteCount.textContent = complaint.upvotes || 0;
+            downvoteCount.textContent = complaint.downvotes || 0;
+        }
+
+        // NEW: Updated voting UI logic
+        function updateVoteUI(voteMap) {
+            if (!currentUser) return;
+            const myVote = voteMap[currentUser.uid];
+
+            upvoteBtn.classList.remove('bg-green-100', 'text-green-700', 'border-green-500');
+            downvoteBtn.classList.remove('bg-red-100', 'text-red-700', 'border-red-500');
+
+            // Logic for showing/hiding comment form
+            if (myVote === 'up') {
+                upvoteBtn.classList.add('bg-green-100', 'text-green-700', 'border-green-500');
+                commentForm.classList.remove('hidden');
+                voteMessage.classList.add('hidden');
+            } else if (myVote === 'down') {
+                downvoteBtn.classList.add('bg-red-100', 'text-red-700', 'border-red-500');
+                commentForm.classList.remove('hidden');
+                voteMessage.classList.add('hidden');
+            } else {
+                // Not voted yet
+                commentForm.classList.add('hidden');
+                voteMessage.classList.remove('hidden');
+            }
+            // The comment list itself (#comments-list) is always visible
+        }
+
+        upvoteBtn.addEventListener('click', () => handleVote('up'));
+        downvoteBtn.addEventListener('click', () => handleVote('down'));
+
+        async function handleVote(voteType) {
+            if (!currentUser || !currentComplaintId) return;
+
+            showLoading();
+            const complaintRef = doc(db, "complaints", currentComplaintId);
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const complaintDoc = await transaction.get(complaintRef);
+                    if (!complaintDoc.exists()) {
+                        throw "Complaint does not exist!";
+                    }
+
+                    const data = complaintDoc.data();
+                    const voteMap = data.voteMap || {};
+                    const currentVote = voteMap[currentUser.uid];
+
+                    let newUpvotes = data.upvotes || 0;
+                    let newDownvotes = data.downvotes || 0;
+
+                    if (currentVote === voteType) {
+                        delete voteMap[currentUser.uid];
+                        if (voteType === 'up') newUpvotes--;
+                        if (voteType === 'down') newDownvotes--;
+                    } else {
+                        if (currentVote === 'up') newUpvotes--;
+                        if (currentVote === 'down') newDownvotes--;
+                        voteMap[currentUser.uid] = voteType;
+                        if (voteType === 'up') newUpvotes++;
+                        if (voteType === 'down') newDownvotes++;
+                    }
+
+                    transaction.update(complaintRef, {
+                        voteMap: voteMap,
+                        upvotes: newUpvotes,
+                        downvotes: newDownvotes
+                    });
+                });
+            } catch (error) {
+                console.error("Error voting:", error);
+                showToast("خطأ أثناء التصويت.", true);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        commentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser || !currentComplaintId) return;
+
+            const submitBtn = document.getElementById('submit-comment-btn');
+            submitBtn.disabled = true;
+            showLoading();
+
+            const text = document.getElementById('comment-text').value;
+
+            try {
+                const commentsRef = collection(db, "complaints", currentComplaintId, "comments");
+                await addDoc(commentsRef, {
+                    text: text,
+                    fileURL: null, // File uploads removed
+                    authorId: currentUser.uid,
+                    authorName: currentUser.displayName,
+                    createdAt: serverTimestamp()
+                });
+
+                const complaintRef = doc(db, "complaints", currentComplaintId);
+                await runTransaction(db, async (transaction) => {
+                    const complaintDoc = await transaction.get(complaintRef);
+                    if (!complaintDoc.exists()) throw "Complaint not found";
+                    const newCount = (complaintDoc.data().commentCount || 0) + 1;
+                    transaction.update(complaintRef, { commentCount: newCount });
+                });
+
+                commentForm.reset();
+                showToast("تم إضافة تعليقك.");
+
+            } catch (error) {
+                console.error("Error adding comment:", error);
+                showToast("خطأ أثناء إضافة التعليق.", true);
+            } finally {
+                hideLoading();
+                submitBtn.disabled = false;
+            }
+        });
+
+        function renderComments(comments) {
+            commentsList.innerHTML = '';
+            if (comments.length === 0) {
+                commentsList.innerHTML = `<p class="text-center text-slate-500 p-4">لا توجد تعليقات حتى الآن.</p>`;
+                return;
+            }
+
+            comments.forEach(comment => {
+                const timeAgo = comment.createdAt ? timeDifference(Date.now(), comment.createdAt.toDate()) : 'منذ فترة';
+
+                const commentEl = document.createElement('div');
+                commentEl.className = "bg-slate-50 p-4 rounded-lg flex gap-3";
+                commentEl.innerHTML = `
+                    <div class="w-8 h-8 bg-slate-200 rounded-full flex-shrink-0 flex items-center justify-center">
+                        <i class="fa-solid fa-user text-slate-500"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold text-slate-800 text-sm">${comment.authorName}</span>
+                            <span class="text-xs text-slate-500">${timeAgo}</span>
+                        </div>
+                        <p class="text-slate-700 mt-2">${comment.text}</p>
+                    </div>
+                `;
+                commentsList.appendChild(commentEl);
+            });
+        }
+
+        // --- Init ---
+        window.addEventListener('hashchange', handleHashChange);
+        handleHashChange(); // Trigger initial check
+
+    </script>
+</body>
+
+</html>
