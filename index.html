@@ -70,6 +70,55 @@
             color: #0d9488;
             /* teal-600 */
         }
+
+        /* Vote status in comments */
+        .vote-status {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-right: 8px;
+        }
+
+        .vote-status-agree {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .vote-status-disagree {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        /* Report category colors */
+        .category-traffic {
+            border-right: 4px solid #3b82f6;
+        }
+
+        .category-noise {
+            border-right: 4px solid #f59e0b;
+        }
+
+        .category-cleanliness {
+            border-right: 4px solid #10b981;
+        }
+
+        .category-services {
+            border-right: 4px solid #8b5cf6;
+        }
+
+        .category-environment {
+            border-right: 4px solid #06b6d4;
+        }
+
+        .category-safety {
+            border-right: 4px solid #ef4444;
+        }
+
+        /* Custom marker styles */
+        .category-marker {
+            background: transparent !important;
+            border: none !important;
+        }
     </style>
 </head>
 
@@ -432,7 +481,8 @@
             orderBy,
             serverTimestamp,
             writeBatch,
-            runTransaction
+            runTransaction,
+            updateDoc
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ========================================================================
@@ -921,10 +971,30 @@
             Object.values(complaintMarkers).forEach(marker => marker.remove());
             complaintMarkers = {};
 
+            // Define category colors for markers
+            const categoryColors = {
+                traffic: '#3b82f6',
+                noise: '#f59e0b',
+                cleanliness: '#10b981',
+                services: '#8b5cf6',
+                environment: '#06b6d4',
+                safety: '#ef4444'
+            };
+
             complaints.forEach(complaint => {
                 if (complaint.location) {
                     const { lat, lng } = complaint.location;
-                    const marker = L.marker([lat, lng]).addTo(mainMap);
+                    const color = categoryColors[complaint.category] || 'gray';
+
+                    // Create custom colored marker
+                    const marker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`,
+                            className: 'category-marker',
+                            iconSize: [16, 16]
+                        })
+                    }).addTo(mainMap);
+
                     marker.bindPopup(`
                         <b>${getCategoryName(complaint.category)}</b>
                         <p>${complaint.description.substring(0, 50)}...</p>
@@ -1038,7 +1108,7 @@
 
             complaints.forEach(complaint => {
                 const complaintCard = document.createElement('div');
-                complaintCard.className = "bg-white p-5 rounded-xl shadow-lg transition transform hover:shadow-xl";
+                complaintCard.className = `bg-white p-5 rounded-xl shadow-lg transition transform hover:shadow-xl category-${complaint.category}`;
 
                 const timeAgo = complaint.createdAt ? timeDifference(Date.now(), complaint.createdAt.toDate()) : 'منذ فترة';
                 const author = complaint.isAnonymous ? "مستخدم مجهول" : complaint.authorName || "مستخدم";
@@ -1304,21 +1374,26 @@
             upvoteBtn.classList.remove('bg-green-100', 'text-green-700', 'border-green-500');
             downvoteBtn.classList.remove('bg-red-100', 'text-red-700', 'border-red-500');
 
-            // Logic for showing/hiding comment form
-            if (myVote === 'up') {
-                upvoteBtn.classList.add('bg-green-100', 'text-green-700', 'border-green-500');
-                commentForm.classList.remove('hidden');
-                voteMessage.classList.add('hidden');
-            } else if (myVote === 'down') {
-                downvoteBtn.classList.add('bg-red-100', 'text-red-700', 'border-red-500');
+            // Disable buttons if already voted
+            if (myVote) {
+                if (myVote === 'up') {
+                    upvoteBtn.classList.add('bg-green-100', 'text-green-700', 'border-green-500');
+                    upvoteBtn.disabled = true;
+                } else if (myVote === 'down') {
+                    downvoteBtn.classList.add('bg-red-100', 'text-red-700', 'border-red-500');
+                    downvoteBtn.disabled = true;
+                }
+
+                // User has voted, show comment form
                 commentForm.classList.remove('hidden');
                 voteMessage.classList.add('hidden');
             } else {
-                // Not voted yet
+                // User hasn't voted yet
+                upvoteBtn.disabled = false;
+                downvoteBtn.disabled = false;
                 commentForm.classList.add('hidden');
                 voteMessage.classList.remove('hidden');
             }
-            // The comment list itself (#comments-list) is always visible
         }
 
         upvoteBtn.addEventListener('click', () => handleVote('up'));
@@ -1339,22 +1414,19 @@
 
                     const data = complaintDoc.data();
                     const voteMap = data.voteMap || {};
-                    const currentVote = voteMap[currentUser.uid];
+
+                    // Check if user already voted - if yes, prevent changing
+                    if (voteMap[currentUser.uid]) {
+                        throw "لا يمكن تغيير التصويت بعد الإدلاء به";
+                    }
 
                     let newUpvotes = data.upvotes || 0;
                     let newDownvotes = data.downvotes || 0;
 
-                    if (currentVote === voteType) {
-                        delete voteMap[currentUser.uid];
-                        if (voteType === 'up') newUpvotes--;
-                        if (voteType === 'down') newDownvotes--;
-                    } else {
-                        if (currentVote === 'up') newUpvotes--;
-                        if (currentVote === 'down') newDownvotes--;
-                        voteMap[currentUser.uid] = voteType;
-                        if (voteType === 'up') newUpvotes++;
-                        if (voteType === 'down') newDownvotes++;
-                    }
+                    // Add vote (no removal logic since votes are permanent)
+                    voteMap[currentUser.uid] = voteType;
+                    if (voteType === 'up') newUpvotes++;
+                    if (voteType === 'down') newDownvotes++;
 
                     transaction.update(complaintRef, {
                         voteMap: voteMap,
@@ -1362,9 +1434,15 @@
                         downvotes: newDownvotes
                     });
                 });
+
+                showToast("تم تسجيل تصويتك بنجاح!");
             } catch (error) {
                 console.error("Error voting:", error);
-                showToast("خطأ أثناء التصويت.", true);
+                if (error.message && error.message.includes("لا يمكن تغيير التصويت")) {
+                    showToast("لا يمكن تغيير التصويت بعد الإدلاء به", true);
+                } else {
+                    showToast("خطأ أثناء التصويت.", true);
+                }
             } finally {
                 hideLoading();
             }
@@ -1381,22 +1459,24 @@
             const text = document.getElementById('comment-text').value;
 
             try {
+                // Get current vote status
+                const complaintRef = doc(db, "complaints", currentComplaintId);
+                const complaintDoc = await getDoc(complaintRef);
+                const voteMap = complaintDoc.data().voteMap || {};
+                const userVote = voteMap[currentUser.uid];
+
                 const commentsRef = collection(db, "complaints", currentComplaintId, "comments");
                 await addDoc(commentsRef, {
                     text: text,
-                    fileURL: null, // File uploads removed
+                    fileURL: null,
                     authorId: currentUser.uid,
                     authorName: currentUser.displayName,
+                    voteType: userVote, // Store the vote type with comment
                     createdAt: serverTimestamp()
                 });
 
-                const complaintRef = doc(db, "complaints", currentComplaintId);
-                await runTransaction(db, async (transaction) => {
-                    const complaintDoc = await transaction.get(complaintRef);
-                    if (!complaintDoc.exists()) throw "Complaint not found";
-                    const newCount = (complaintDoc.data().commentCount || 0) + 1;
-                    transaction.update(complaintRef, { commentCount: newCount });
-                });
+                const newCount = (complaintDoc.data().commentCount || 0) + 1;
+                await updateDoc(complaintRef, { commentCount: newCount });
 
                 commentForm.reset();
                 showToast("تم إضافة تعليقك.");
@@ -1420,6 +1500,14 @@
             comments.forEach(comment => {
                 const timeAgo = comment.createdAt ? timeDifference(Date.now(), comment.createdAt.toDate()) : 'منذ فترة';
 
+                // Get vote status for this comment author
+                let voteStatus = '';
+                if (comment.voteType) {
+                    const voteClass = comment.voteType === 'up' ? 'vote-status-agree' : 'vote-status-disagree';
+                    const voteText = comment.voteType === 'up' ? 'يوافق' : 'لا يوافق';
+                    voteStatus = `<span class="vote-status ${voteClass}">${voteText}</span>`;
+                }
+
                 const commentEl = document.createElement('div');
                 commentEl.className = "bg-slate-50 p-4 rounded-lg flex gap-3";
                 commentEl.innerHTML = `
@@ -1428,7 +1516,10 @@
                     </div>
                     <div class="flex-grow">
                         <div class="flex justify-between items-center">
-                            <span class="font-semibold text-slate-800 text-sm">${comment.authorName}</span>
+                            <div class="flex items-center">
+                                ${voteStatus}
+                                <span class="font-semibold text-slate-800 text-sm">${comment.authorName}</span>
+                            </div>
                             <span class="text-xs text-slate-500">${timeAgo}</span>
                         </div>
                         <p class="text-slate-700 mt-2">${comment.text}</p>
