@@ -11,8 +11,11 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Font Awesome for icons (includes fa-brands for WhatsApp) -->
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <!-- Google reCAPTCHA -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
     <style>
         /* Custom styles */
@@ -27,6 +30,15 @@
         #submit-map,
         #detail-map {
             height: 300px;
+            width: 100%;
+            border-radius: 0.75rem;
+            /* rounded-xl */
+            z-index: 10;
+        }
+
+        /* NEW: Profile map */
+        #profile-map {
+            height: 250px;
             width: 100%;
             border-radius: 0.75rem;
             /* rounded-xl */
@@ -119,6 +131,16 @@
             background: transparent !important;
             border: none !important;
         }
+
+        /* Verified Badge Icon */
+        .verified-badge {
+            color: #3b82f6;
+            /* blue-500 */
+            font-size: 0.9em;
+            /* Slightly smaller */
+            margin-right: 4px;
+            /* Space from name */
+        }
     </style>
 </head>
 
@@ -199,36 +221,17 @@
                         <p id="nid-success" class="text-green-500 text-sm hidden"></p>
                     </div>
 
-                    <!-- NEW: WhatsApp Verification UI -->
+                    <!-- REMOVED: WhatsApp Verification UI -->
                     <div>
-                        <label for="reg-phone" class="block text-sm font-medium text-slate-700">رقم الهاتف (لتأكيد
-                            واتساب)</label>
-                        <div class="flex gap-2 mt-1">
-                            <input type="tel" id="reg-phone" required
-                                class="flex-grow block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-                                placeholder="e.g. 01001234567">
-                            <button type="button" id="send-whatsapp-btn"
-                                class="flex-shrink-0 bg-green-500 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-green-600 transition transform hover:scale-105">
-                                <i class="fa-brands fa-whatsapp ml-1"></i>
-                                إرسال
-                            </button>
-                        </div>
+                        <label for="reg-phone" class="block text-sm font-medium text-slate-700">رقم الهاتف</label>
+                        <input type="tel" id="reg-phone" required
+                            class="flex-grow block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+                            placeholder="e.g. 01001234567">
                     </div>
-
-                    <div id="whatsapp-code-group" class="space-y-2 hidden">
-                        <label for="reg-whatsapp-code" class="block text-sm font-medium text-slate-700">كود التحقق من
-                            واتساب</label>
-                        <input type="text" id="reg-whatsapp-code"
-                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-                            placeholder="ادخل الكود المكون من 6 أرقام">
-                        <p class="text-xs text-slate-500">تم إرسال الكود. الرجاء إدخاله هنا.</p>
-                        <p class="text-xs text-teal-500">(للتجربة: استخدم الكود 00000)</p>
-                    </div>
-                    <!-- End WhatsApp UI -->
 
                     <div>
                         <label for="reg-email" class="block text-sm font-medium text-slate-700">البريد
-                            الإلكتروني</label>
+                            الإلكتروني (سيتم إرسال رابط تحقق)</label>
                         <input type="email" id="reg-email" required
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                     </div>
@@ -237,6 +240,13 @@
                         <input type="password" id="reg-password" required minlength="6"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                     </div>
+
+                    <!-- NEW: reCAPTCHA -->
+                    <div class="flex justify-center">
+                        <div class="g-recaptcha my-4" data-sitekey="6Lc5QwosAAAAAG140Oy11EY4eKu129EOs7YBcfm3"></div>
+                    </div>
+                    <p id="recaptcha-error" class="text-red-500 text-sm text-center hidden"></p>
+
 
                     <p id="register-error" class="text-red-500 text-sm hidden"></p>
 
@@ -251,6 +261,23 @@
                 </p>
             </div>
         </section>
+
+        <!-- Email Verification Sent Page -->
+        <section id="email-verify-page" class="page hidden">
+            <div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-xl text-center">
+                <i class="fa-solid fa-envelope-circle-check text-5xl text-green-500 mb-4"></i>
+                <h2 class="text-2xl font-bold mb-4">تم إرسال رابط التحقق!</h2>
+                <p class="text-slate-600 mb-6">
+                    تم إرسال رابط تحقق إلى بريدك الإلكتروني. الرجاء الضغط على الرابط في الرسالة لتفعيل حسابك.
+                </p>
+                <p class="text-sm text-slate-500 mb-6">(تأكد من مراجعة ملف الرسائل غير المرغوب فيها "Spam")</p>
+                <a href="#login"
+                    class="page-link w-full bg-teal-600 text-white py-2 px-4 rounded-lg shadow-md hover:bg-teal-700">
+                    الذهاب لتسجيل الدخول
+                </a>
+            </div>
+        </section>
+
 
         <!-- Main Feed Page -->
         <section id="main-page" class="page hidden">
@@ -270,7 +297,7 @@
                         <option value="safety">الأمن والأمان</option>
                     </select>
 
-                    <!-- NEW: Sort Buttons -->
+                    <!-- Sort Buttons -->
                     <div class="flex bg-slate-100 p-1 rounded-lg">
                         <button id="sort-newest-btn" data-sort="newest"
                             class="sort-btn btn-active px-4 py-1.5 rounded-md text-sm font-medium">الأحدث</button>
@@ -423,7 +450,7 @@
                     </div>
                 </div>
 
-                <!-- NEW: Comment Section - Visible by default, form is hidden -->
+                <!-- Comment Section -->
                 <div id="comment-section" class="">
                     <h3 class="text-xl font-bold mb-4">التعليقات</h3>
 
@@ -454,6 +481,57 @@
             </div>
         </section>
 
+        <!-- NEW: Profile Page -->
+        <section id="profile-page" class="page hidden">
+            <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
+                <button type="button" class="page-link text-teal-600 hover:text-teal-800 mb-4" data-target="main">
+                    <i class="fa-solid fa-arrow-right ml-2"></i> العودة للرئيسية
+                </button>
+
+                <!-- Profile Header -->
+                <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
+                    <div
+                        class="w-16 h-16 bg-slate-200 rounded-full flex-shrink-0 flex items-center justify-center text-slate-500">
+                        <i class="fa-solid fa-user text-3xl"></i>
+                    </div>
+                    <div>
+                        <h2 id="profile-name" class="text-2xl font-bold text-slate-800">جاري التحميل...</h2>
+                        <div id="profile-verified-badge" class="hidden mt-1">
+                            <span
+                                class="flex items-center gap-1 text-sm font-medium text-blue-600 bg-blue-100 px-3 py-0.5 rounded-full">
+                                <i class="fa-solid fa-check-circle"></i>
+                                <span>حساب موثق</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-slate-50 p-4 rounded-lg text-center">
+                        <span class="block text-2xl font-bold text-teal-600" id="profile-post-count">0</span>
+                        <span class="text-sm text-slate-600">إجمالي الشكاوى</span>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg text-center">
+                        <span class="block text-2xl font-bold text-green-600" id="profile-agree-count">...</span>
+                        <span class="text-sm text-slate-600">مرة "أوافق"</span>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg text-center">
+                        <span class="block text-2xl font-bold text-red-600" id="profile-disagree-count">...</span>
+                        <span class="text-sm text-slate-600">مرة "لا أوافق"</span>
+                    </div>
+                </div>
+                <p class="text-xs text-center text-slate-400 -mt-4 mb-6">(إحصائيات التصويت قيد الإنشاء)</p>
+
+
+                <!-- User's Posts -->
+                <h3 class="text-xl font-bold mb-4">شكاوى هذا المستخدم</h3>
+                <div id="profile-complaints-list" class="space-y-4">
+                    <!-- User's complaints injected by JS -->
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <script type="module">
@@ -465,7 +543,8 @@
             createUserWithEmailAndPassword,
             signOut,
             onAuthStateChanged,
-            updateProfile
+            updateProfile,
+            sendEmailVerification
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import {
             getFirestore,
@@ -505,8 +584,9 @@
         const db = getFirestore(app);
 
         // Global state
-        let currentUser = null;
+        let currentUser = null; // Will store { ...user, fullName, isVerified }
         let currentComplaintId = null;
+        let currentProfileId = null; // NEW: For profile page
         let mainMap = null;
         let submitMap = null;
         let detailMap = null;
@@ -514,7 +594,8 @@
         let detailMarker = null;
         let complaintMarkers = {};
         let complaintListeners = []; // To unsubscribe from listeners
-        let currentSort = 'newest'; // NEW: Sorting state
+        let currentSort = 'newest';
+        let grecaptcha = window.grecaptcha || null; // For reCAPTCHA
 
         // DOM Elements
         const loadingOverlay = document.getElementById('loading-overlay');
@@ -528,22 +609,20 @@
         const regNidInput = document.getElementById('reg-nid');
         const nidError = document.getElementById('nid-error');
         const nidSuccess = document.getElementById('nid-success');
-        const regPhoneInput = document.getElementById('reg-phone'); // NEW
-        const sendWhatsappBtn = document.getElementById('send-whatsapp-btn'); // NEW
-        const whatsappCodeGroup = document.getElementById('whatsapp-code-group'); // NEW
-        const registerSubmitBtn = document.getElementById('register-submit-btn'); // NEW
+        const regPhoneInput = document.getElementById('reg-phone');
+        const registerSubmitBtn = document.getElementById('register-submit-btn');
 
         // Main Page
         const feedViewBtn = document.getElementById('feed-view-btn');
         const mapViewBtn = document.getElementById('map-view-btn');
-        const viewBtns = document.querySelectorAll('.view-btn'); // NEW
+        const viewBtns = document.querySelectorAll('.view-btn');
         const feedView = document.getElementById('feed-view');
         const mapView = document.getElementById('map-view');
         const complaintsFeed = document.getElementById('complaints-feed');
         const categoryFilter = document.getElementById('category-filter');
-        const sortNewestBtn = document.getElementById('sort-newest-btn'); // NEW
-        const sortHotBtn = document.getElementById('sort-hot-btn'); // NEW
-        const sortBtns = document.querySelectorAll('.sort-btn'); // NEW
+        const sortNewestBtn = document.getElementById('sort-newest-btn');
+        const sortHotBtn = document.getElementById('sort-hot-btn');
+        const sortBtns = document.querySelectorAll('.sort-btn');
 
         // Submit Page
         const showSubmitFormBtn = document.getElementById('show-submit-form-btn');
@@ -565,6 +644,13 @@
         const commentSection = document.getElementById('comment-section');
         const commentForm = document.getElementById('comment-form');
         const commentsList = document.getElementById('comments-list');
+
+        // NEW: Profile Page
+        const profileName = document.getElementById('profile-name');
+        const profileVerifiedBadge = document.getElementById('profile-verified-badge');
+        const profilePostCount = document.getElementById('profile-post-count');
+        const profileComplaintsList = document.getElementById('profile-complaints-list');
+
 
         // --- Utility Functions ---
 
@@ -634,27 +720,46 @@
                 if (pageId === 'complaint-detail') {
                     fetchComplaintDetails();
                 }
+
+                // NEW: Profile page logic
+                if (pageId === 'profile') {
+                    loadProfilePage();
+                }
             }
         }
 
         function handleHashChange() {
             const hash = window.location.hash.substring(1) || 'login';
+            const pageId = hash.split('?')[0]; // Get page ID, e.g., 'profile'
+            const urlParams = new URLSearchParams(hash.split('?')[1]); // Get query params
+
+            // Store IDs globally from hash
+            if (pageId === 'complaint-detail') {
+                currentComplaintId = urlParams.get('id');
+            }
+            if (pageId === 'profile') {
+                currentProfileId = urlParams.get('id');
+            }
+
+
             if (currentUser) {
-                const allowedPages = ['main', 'submit-complaint', 'complaint-detail'];
-                if (allowedPages.includes(hash)) {
-                    if (hash === 'complaint-detail' && !currentComplaintId) {
+                // NEW: Added 'profile'
+                const allowedPages = ['main', 'submit-complaint', 'complaint-detail', 'profile'];
+                if (allowedPages.includes(pageId)) {
+                    if (pageId === 'complaint-detail' && !currentComplaintId) {
                         showPage('main');
                     } else {
-                        showPage(hash);
+                        showPage(pageId);
                     }
                 } else {
                     window.location.hash = 'main';
                     showPage('main');
                 }
             } else {
-                const allowedPages = ['login', 'register'];
-                if (allowedPages.includes(hash)) {
-                    showPage(hash);
+                // Not logged in
+                const allowedPages = ['login', 'register', 'email-verify'];
+                if (allowedPages.includes(pageId)) {
+                    showPage(pageId);
                 } else {
                     window.location.hash = 'login';
                     showPage('login');
@@ -666,71 +771,84 @@
             let target = e.target.closest('.page-link');
             if (target) {
                 e.preventDefault();
-                const targetPage = target.getAttribute('href') || target.dataset.target;
+                const targetHash = target.getAttribute('href') || target.dataset.target;
 
-                if (targetPage === '#complaint-detail') {
-                    currentComplaintId = target.dataset.id;
-                    window.location.hash = `complaint-detail`;
-                } else {
-                    window.location.hash = targetPage.replace('#', '');
-                }
+                // Stop if it's the same hash
+                if (window.location.hash === targetHash) return;
+
+                // Set new hash, which triggers handleHashChange
+                window.location.hash = targetHash.replace('#', '');
             }
         });
 
         // --- Authentication ---
 
-        // NEW: Modified onAuthStateChanged to fetch user doc for full name
         onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                console.log("User logged in:", user.uid);
+            if (user && user.emailVerified) { // Only consider user "logged in" if email is verified
+                console.log("User logged in and verified:", user.uid);
 
-                // Fetch user doc to get full name
                 const userDocRef = doc(db, 'users', user.uid);
                 getDoc(userDocRef).then(docSnap => {
                     let fullName = user.displayName || user.email; // Fallback
-                    if (docSnap.exists() && docSnap.data().fullName) {
-                        fullName = docSnap.data().fullName; // Use Firestore name
-                    }
+                    let isVerifiedAdmin = false; // Admin badge status
 
-                    // NOW update the nav with the correct name
-                    updateNav(user, fullName); // Pass the fetched name
-
-                    if (!docSnap.exists()) {
-                        console.error("User doc not found!");
-                        signOut(auth);
+                    if (docSnap.exists()) {
+                        fullName = docSnap.data().fullName || fullName;
+                        isVerifiedAdmin = docSnap.data().isVerified || false;
                     } else {
-                        // All good, go to main page
-                        if (window.location.hash === '#login' || window.location.hash === '#register' || window.location.hash === '') {
-                            window.location.hash = 'main';
-                        }
-                        handleHashChange(); // Handle hash change AFTER name is fetched
+                        console.error("User doc not found!");
                     }
+
+                    currentUser = {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: fullName,
+                        fullName: fullName,
+                        isVerified: isVerifiedAdmin
+                    };
+
+                    updateNav(user, fullName);
+
+                    if (window.location.hash === '#login' || window.location.hash === '#register' || window.location.hash === '') {
+                        window.location.hash = 'main';
+                    }
+                    handleHashChange();
+
                 }).catch(err => {
-                    // Handle error, maybe just use default name
                     console.error("Error fetching user doc:", err);
-                    updateNav(user, user.displayName || user.email); // Fallback
+                    updateNav(user, user.displayName || user.email);
                     handleHashChange();
                 });
             } else {
+                if (user && !user.emailVerified) {
+                    console.log("User exists but email not verified.");
+                    signOut(auth);
+                }
+
                 currentUser = null;
-                console.log("User logged out");
-                updateNav(null); // No user, no name
+                console.log("User logged out or not verified.");
+                updateNav(null);
                 currentComplaintId = null;
-                cleanupListeners(); // Unsubscribe from listeners on logout
-                window.location.hash = 'login';
-                handleHashChange(); // Handle hash change on auth state
+                currentProfileId = null;
+                cleanupListeners();
+
+                const currentHash = window.location.hash.substring(1);
+                if (!['login', 'register', 'email-verify'].includes(currentHash.split('?')[0])) {
+                    window.location.hash = 'login';
+                }
+                handleHashChange();
             }
         });
 
-        // NEW: Modified updateNav to accept fullName
         function updateNav(user, fullName) {
             navLinks.innerHTML = '';
             if (user) {
-                const nameToShow = fullName || user.email; // Use the passed fullName
+                const nameToShow = fullName || user.email;
                 navLinks.innerHTML = `
-                    <span class="text-slate-700 font-medium">مرحباً، ${nameToShow}</span>
-                    <a href="#main" class="page-link text-slate-700 hover:text-teal-600">الرئيسية</a>
+                    <span classclass="text-slate-700 font-medium hidden md:inline">مرحباً، ${nameToShow}</span>
+                    <a href="#main" class="page-link text-slate-700 hover:text-teal-600 px-2 py-1">الرئيسية</a>
+                    <!-- NEW: Profile Link -->
+                    <a href="#profile?id=${user.uid}" class="page-link text-slate-700 hover:text-teal-600 px-2 py-1">ملفي الشخصي</a>
                     <button id="logout-btn" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-medium hover:bg-red-600 transition transform hover:scale-105">خروج</button>
                 `;
                 document.getElementById('logout-btn').addEventListener('click', () => {
@@ -744,6 +862,7 @@
             }
         }
 
+
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             showLoading();
@@ -752,43 +871,29 @@
             const errorEl = document.getElementById('login-error');
 
             try {
-                await signInWithEmailAndPassword(auth, email, password);
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+                if (!userCredential.user.emailVerified) {
+                    await signOut(auth);
+                    errorEl.textContent = "لم يتم التحقق من بريدك الإلكتروني. الرجاء الضغط على الرابط في رسالة التحقق.";
+                    errorEl.classList.remove('hidden');
+                    hideLoading();
+                    return;
+                }
                 errorEl.classList.add('hidden');
             } catch (error) {
                 console.error("Login error:", error.message);
-                errorEl.textContent = "فشل تسجيل الدخول. تأكد من البريد الإلكتروني وكلمة المرور.";
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    errorEl.textContent = "فشل تسجيل الدخول. تأكد من البريد الإلكتروني وكلمة المرور.";
+                } else {
+                    errorEl.textContent = "فشل تسجيل الدخول: " + error.message;
+                }
                 errorEl.classList.remove('hidden');
             } finally {
-                hideLoading();
+                if (!auth.currentUser) {
+                    hideLoading();
+                }
             }
-        });
-
-        // NEW: WhatsApp UI Simulation with bypass
-        sendWhatsappBtn.addEventListener('click', () => {
-            const phone = regPhoneInput.value;
-            // Simple validation (e.g., Egyptian number)
-            if (!/^(010|011|012|015)\d{8}$/.test(phone)) {
-                showToast("الرجاء إدخال رقم هاتف مصري صحيح.", true);
-                return;
-            }
-
-            // --- SIMULATION ---
-            // In a real app, you would call your backend API here to send a WhatsApp OTP.
-            // e.g., await fetch('/api/send-whatsapp-otp', { method: 'POST', body: JSON.stringify({ phone }) });
-            // For now, we just simulate the success.
-
-            console.log("Simulating WhatsApp code send to:", phone);
-            showLoading();
-            sendWhatsappBtn.disabled = true;
-            regPhoneInput.disabled = true;
-
-            setTimeout(() => {
-                hideLoading();
-                whatsappCodeGroup.classList.remove('hidden');
-                registerSubmitBtn.disabled = false; // Enable submit after "sending" code
-                showToast("تم إرسال كود التحقق إلى واتساب بنجاح.");
-                showToast("للتجربة: استخدم الكود 00000", false);
-            }, 1500); // Simulate network delay
         });
 
 
@@ -802,32 +907,36 @@
             const password = document.getElementById('reg-password').value;
             const errorEl = document.getElementById('register-error');
 
-            // NEW: WhatsApp verification bypass - accept "00000" as valid
-            const whatsappCode = document.getElementById('reg-whatsapp-code').value;
-            if (whatsappCode !== "00000") {
-                errorEl.textContent = "كود التحقق غير صحيح. استخدم 00000 للتجربة.";
-                errorEl.classList.remove('hidden');
+            if (typeof grecaptcha === 'undefined' || !grecaptcha) {
+                grecaptcha = window.grecaptcha;
+            }
+            const recaptchaResponse = grecaptcha ? grecaptcha.getResponse() : null;
+            const recaptchaErrorEl = document.getElementById('recaptcha-error');
+
+            if (!recaptchaResponse || recaptchaResponse.length === 0) {
+                recaptchaErrorEl.textContent = "الرجاء التأكيد أنك لست روبوت.";
+                recaptchaErrorEl.classList.remove('hidden');
                 hideLoading();
                 return;
             }
+            recaptchaErrorEl.classList.add('hidden');
+
 
             const nidValidation = validateNationalID(nid);
             if (!nidValidation.valid) {
                 errorEl.textContent = `الرقم القومي غير صالح: ${nidValidation.error}`;
                 errorEl.classList.remove('hidden');
                 hideLoading();
+                if (grecaptcha) grecaptcha.reset();
                 return;
             }
 
             try {
-                // 1. Create user in Auth
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // 2. Update Auth profile (display name)
                 await updateProfile(user, { displayName: name });
 
-                // 3. Create user document in Firestore
                 await setDoc(doc(db, "users", user.uid), {
                     uid: user.uid,
                     fullName: name,
@@ -836,11 +945,19 @@
                     email: email,
                     createdAt: serverTimestamp(),
                     birthDate: nidValidation.data.birthDate.toISOString(),
-                    governorate: nidValidation.data.governorate
+                    governorate: nidValidation.data.governorate,
+                    isVerified: false
                 });
 
-                console.log("User registered and data stored.");
-                errorEl.classList.add('hidden');
+                await sendEmailVerification(user);
+                console.log("Verification email sent.");
+
+                await signOut(auth);
+                showToast("تم إرسال رابط التحقق إلى بريدك.");
+                registerForm.reset();
+                if (grecaptcha) grecaptcha.reset();
+                window.location.hash = 'email-verify';
+
             } catch (error) {
                 console.error("Registration error:", error.message);
                 if (error.code === 'auth/email-already-in-use') {
@@ -849,6 +966,7 @@
                     errorEl.textContent = "فشل التسجيل. " + error.message;
                 }
                 errorEl.classList.remove('hidden');
+                if (grecaptcha) grecaptcha.reset();
             } finally {
                 hideLoading();
             }
@@ -971,14 +1089,9 @@
             Object.values(complaintMarkers).forEach(marker => marker.remove());
             complaintMarkers = {};
 
-            // Define category colors for markers
             const categoryColors = {
-                traffic: '#3b82f6',
-                noise: '#f59e0b',
-                cleanliness: '#10b981',
-                services: '#8b5cf6',
-                environment: '#06b6d4',
-                safety: '#ef4444'
+                traffic: '#3b82f6', noise: '#f59e0b', cleanliness: '#10b981',
+                services: '#8b5cf6', environment: '#06b6d4', safety: '#ef4444'
             };
 
             complaints.forEach(complaint => {
@@ -986,7 +1099,6 @@
                     const { lat, lng } = complaint.location;
                     const color = categoryColors[complaint.category] || 'gray';
 
-                    // Create custom colored marker
                     const marker = L.marker([lat, lng], {
                         icon: L.divIcon({
                             html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`,
@@ -998,7 +1110,7 @@
                     marker.bindPopup(`
                         <b>${getCategoryName(complaint.category)}</b>
                         <p>${complaint.description.substring(0, 50)}...</p>
-                        <a href="#complaint-detail" class="page-link text-teal-600" data-id="${complaint.id}">عرض التفاصيل</a>
+                        <a href="#complaint-detail?id=${complaint.id}" class="page-link text-teal-600">عرض التفاصيل</a>
                     `);
                     complaintMarkers[complaint.id] = marker;
                 }
@@ -1057,14 +1169,13 @@
                     complaints.push({ id: doc.id, ...doc.data() });
                 });
 
-                // NEW: In-memory sorting based on currentSort state
                 if (currentSort === 'newest') {
                     complaints.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
                 } else if (currentSort === 'hot') {
                     complaints.sort((a, b) => {
                         const scoreA = (a.upvotes || 0) - (a.downvotes || 0);
                         const scoreB = (b.upvotes || 0) - (b.downvotes || 0);
-                        return scoreB - scoreA; // Highest score first
+                        return scoreB - scoreA;
                     });
                 }
 
@@ -1098,7 +1209,6 @@
             return icons[key] || "fa-question";
         }
 
-        // NEW: Updated social card render function
         function renderComplaintsFeed(complaints) {
             complaintsFeed.innerHTML = '';
             if (complaints.length === 0) {
@@ -1111,7 +1221,17 @@
                 complaintCard.className = `bg-white p-5 rounded-xl shadow-lg transition transform hover:shadow-xl category-${complaint.category}`;
 
                 const timeAgo = complaint.createdAt ? timeDifference(Date.now(), complaint.createdAt.toDate()) : 'منذ فترة';
-                const author = complaint.isAnonymous ? "مستخدم مجهول" : complaint.authorName || "مستخدم";
+
+                // NEW: Add verified badge check and profile link
+                let authorDisplay;
+                if (complaint.isAnonymous) {
+                    authorDisplay = "مستخدم مجهول";
+                } else {
+                    const authorName = complaint.authorName || "مستخدم";
+                    const verifiedBadge = complaint.authorIsVerified ?
+                        '<i class="fa-solid fa-check-circle verified-badge" title="حساب موثق"></i>' : '';
+                    authorDisplay = `<a href="#profile?id=${complaint.authorId}" class="page-link font-semibold text-sm text-slate-800 hover:text-teal-600">${authorName}${verifiedBadge}</a>`;
+                }
 
                 const upvotes = complaint.upvotes || 0;
                 const downvotes = complaint.downvotes || 0;
@@ -1128,7 +1248,7 @@
                                 <i class="fa-solid ${getCategoryIcon(complaint.category)} text-teal-600 text-lg"></i>
                             </div>
                             <div>
-                                <span class="font-semibold text-sm text-slate-800">${author}</span>
+                                ${authorDisplay}
                                 <div class="flex items-center gap-2 text-xs text-slate-500">
                                     <span>${getCategoryName(complaint.category)}</span>
                                     <span>&middot;</span>
@@ -1139,7 +1259,7 @@
                     </div>
                     
                     <!-- Complaint Text -->
-                    <p class="mt-4 text-slate-700 leading-relaxed page-link cursor-pointer" data-target="#complaint-detail" data-id="${complaint.id}">
+                    <p class="mt-4 text-slate-700 leading-relaxed page-link cursor-pointer" data-target="#complaint-detail?id=${complaint.id}">
                         ${complaint.description.substring(0, 200)}
                         ${complaint.description.length > 200 ? '...' : ''}
                     </p>
@@ -1159,24 +1279,22 @@
                                 <span class="font-medium ${scoreColor} text-sm">${score}</span>
                                 <i class="fa-solid fa-thumbs-down text-gray-400"></i>
                             </div>
-                            <a href="#complaint-detail" class="page-link flex items-center gap-2 text-slate-500 hover:text-teal-600" data-id="${complaint.id}">
+                            <a href="#complaint-detail?id=${complaint.id}" class="page-link flex items-center gap-2 text-slate-500 hover:text-teal-600">
                                 <i class="fa-solid fa-comment-dots"></i>
                                 <span class="text-sm font-medium">${complaint.commentCount || 0} تعليقات</span>
                             </a>
                         </div>
-                        <a href="#complaint-detail" class="page-link text-teal-600 hover:text-teal-800 text-sm font-semibold" data-id="${complaint.id}">
+                        <a href="#complaint-detail?id=${complaint.id}" class="page-link text-teal-600 hover:text-teal-800 text-sm font-semibold">
                             عرض التفاصيل <i class="fa-solid fa-arrow-left mr-1"></i>
                         </a>
                     </div>
                 `;
 
-                // Add click listener to the whole card/text for navigation
-                complaintCard.querySelectorAll('.page-link').forEach(link => {
+                complaintCard.querySelectorAll('.page-link[data-target]').forEach(link => {
                     link.addEventListener('click', (e) => {
                         e.preventDefault();
-                        e.stopPropagation(); // Prevent multiple triggers
-                        currentComplaintId = complaint.id;
-                        window.location.hash = 'complaint-detail';
+                        e.stopPropagation();
+                        window.location.hash = link.dataset.target.replace('#', '');
                     });
                 });
 
@@ -1223,6 +1341,8 @@
             const videoUrl = complaintVideoUrl.value || null;
 
             try {
+                const isVerified = currentUser.isVerified || false;
+
                 await addDoc(collection(db, "complaints"), {
                     category: category,
                     description: description,
@@ -1235,6 +1355,7 @@
                     isAnonymous: isAnonymous,
                     authorId: currentUser.uid,
                     authorName: currentUser.displayName,
+                    authorIsVerified: isVerified,
                     createdAt: serverTimestamp(),
                     upvotes: 0,
                     downvotes: 0,
@@ -1293,7 +1414,6 @@
                         mapContainer.classList.add('hidden');
                     }
 
-                    // NEW: updateVoteUI logic is updated
                     updateVoteUI(complaintData.voteMap || {});
                 } else {
                     console.error("Complaint not found");
@@ -1326,7 +1446,17 @@
         }
 
         function renderComplaintDetail(complaint, id) {
-            const author = complaint.isAnonymous ? "مستخدم مجهول" : complaint.authorName;
+            // NEW: Add verified badge check and profile link
+            let authorDisplay;
+            if (complaint.isAnonymous) {
+                authorDisplay = "مستخدم مجهول";
+            } else {
+                const authorName = complaint.authorName || "مستخدم";
+                const verifiedBadge = complaint.authorIsVerified ?
+                    '<i class="fa-solid fa-check-circle verified-badge" title="حساب موثق"></i>' : '';
+                authorDisplay = `<a href="#profile?id=${complaint.authorId}" class="page-link text-slate-600 hover:text-teal-600">${authorName}${verifiedBadge}</a>`;
+            }
+
             const timeAgo = complaint.createdAt ? timeDifference(Date.now(), complaint.createdAt.toDate()) : 'منذ فترة';
 
             complaintDetailContent.innerHTML = `
@@ -1338,7 +1468,7 @@
                     <span class="text-sm text-slate-500">${timeAgo}</span>
                 </div>
                 <p class="text-slate-800 my-4 text-lg leading-relaxed">${complaint.description}</p>
-                <div class="text-sm text-slate-600">بواسطة: ${author}</div>
+                <div class="text-sm text-slate-600">بواسطة: ${authorDisplay}</div>
             `;
 
             complaintMedia.innerHTML = '';
@@ -1352,7 +1482,6 @@
                     `;
                 }
                 if (complaint.videoUrl) {
-                    // Simple link for video
                     mediaHTML += `
                         <a href="${complaint.videoUrl}" target="_blank" class="flex items-center text-teal-600 hover:text-teal-800 text-sm font-medium">
                             <i class="fa-solid fa-video ml-2"></i> رابط الفيديو المرفق
@@ -1366,7 +1495,6 @@
             downvoteCount.textContent = complaint.downvotes || 0;
         }
 
-        // NEW: Updated voting UI logic
         function updateVoteUI(voteMap) {
             if (!currentUser) return;
             const myVote = voteMap[currentUser.uid];
@@ -1374,7 +1502,6 @@
             upvoteBtn.classList.remove('bg-green-100', 'text-green-700', 'border-green-500');
             downvoteBtn.classList.remove('bg-red-100', 'text-red-700', 'border-red-500');
 
-            // Disable buttons if already voted
             if (myVote) {
                 if (myVote === 'up') {
                     upvoteBtn.classList.add('bg-green-100', 'text-green-700', 'border-green-500');
@@ -1383,12 +1510,9 @@
                     downvoteBtn.classList.add('bg-red-100', 'text-red-700', 'border-red-500');
                     downvoteBtn.disabled = true;
                 }
-
-                // User has voted, show comment form
                 commentForm.classList.remove('hidden');
                 voteMessage.classList.add('hidden');
             } else {
-                // User hasn't voted yet
                 upvoteBtn.disabled = false;
                 downvoteBtn.disabled = false;
                 commentForm.classList.add('hidden');
@@ -1415,7 +1539,6 @@
                     const data = complaintDoc.data();
                     const voteMap = data.voteMap || {};
 
-                    // Check if user already voted - if yes, prevent changing
                     if (voteMap[currentUser.uid]) {
                         throw "لا يمكن تغيير التصويت بعد الإدلاء به";
                     }
@@ -1423,7 +1546,6 @@
                     let newUpvotes = data.upvotes || 0;
                     let newDownvotes = data.downvotes || 0;
 
-                    // Add vote (no removal logic since votes are permanent)
                     voteMap[currentUser.uid] = voteType;
                     if (voteType === 'up') newUpvotes++;
                     if (voteType === 'down') newDownvotes++;
@@ -1459,11 +1581,12 @@
             const text = document.getElementById('comment-text').value;
 
             try {
-                // Get current vote status
                 const complaintRef = doc(db, "complaints", currentComplaintId);
                 const complaintDoc = await getDoc(complaintRef);
                 const voteMap = complaintDoc.data().voteMap || {};
                 const userVote = voteMap[currentUser.uid];
+
+                const isVerified = currentUser.isVerified || false;
 
                 const commentsRef = collection(db, "complaints", currentComplaintId, "comments");
                 await addDoc(commentsRef, {
@@ -1471,7 +1594,8 @@
                     fileURL: null,
                     authorId: currentUser.uid,
                     authorName: currentUser.displayName,
-                    voteType: userVote, // Store the vote type with comment
+                    authorIsVerified: isVerified,
+                    voteType: userVote,
                     createdAt: serverTimestamp()
                 });
 
@@ -1500,13 +1624,19 @@
             comments.forEach(comment => {
                 const timeAgo = comment.createdAt ? timeDifference(Date.now(), comment.createdAt.toDate()) : 'منذ فترة';
 
-                // Get vote status for this comment author
                 let voteStatus = '';
                 if (comment.voteType) {
                     const voteClass = comment.voteType === 'up' ? 'vote-status-agree' : 'vote-status-disagree';
                     const voteText = comment.voteType === 'up' ? 'يوافق' : 'لا يوافق';
                     voteStatus = `<span class="vote-status ${voteClass}">${voteText}</span>`;
                 }
+
+                // NEW: Add verified badge check and profile link
+                const authorName = comment.authorName || "مستخدم";
+                const verifiedBadge = comment.authorIsVerified ?
+                    '<i class="fa-solid fa-check-circle verified-badge" title="حساب موثق"></i>' : '';
+                const authorDisplay = `<a href="#profile?id=${comment.authorId}" class="page-link font-semibold text-slate-800 text-sm hover:text-teal-600">${authorName}${verifiedBadge}</a>`;
+
 
                 const commentEl = document.createElement('div');
                 commentEl.className = "bg-slate-50 p-4 rounded-lg flex gap-3";
@@ -1518,7 +1648,7 @@
                         <div class="flex justify-between items-center">
                             <div class="flex items-center">
                                 ${voteStatus}
-                                <span class="font-semibold text-slate-800 text-sm">${comment.authorName}</span>
+                                ${authorDisplay}
                             </div>
                             <span class="text-xs text-slate-500">${timeAgo}</span>
                         </div>
@@ -1529,9 +1659,113 @@
             });
         }
 
+        // --- NEW: Profile Page ---
+
+        async function loadProfilePage() {
+            // Get profile ID from global state (set by hash change) or use current user
+            const userId = currentProfileId || currentUser?.uid;
+            if (!userId) {
+                showToast("User ID not found.", true);
+                window.location.hash = 'main';
+                return;
+            }
+
+            showLoading();
+            // Reset page
+            profileName.textContent = 'جاري التحميل...';
+            profileVerifiedBadge.classList.add('hidden');
+            profilePostCount.textContent = '0';
+            profileComplaintsList.innerHTML = '';
+
+            try {
+                // 1. Fetch user data
+                const userDocRef = doc(db, "users", userId);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    profileName.textContent = userData.fullName;
+                    if (userData.isVerified) {
+                        profileVerifiedBadge.classList.remove('hidden');
+                    }
+                } else {
+                    profileName.textContent = 'مستخدم غير معروف';
+                    showToast("User not found.", true);
+                }
+
+                // 2. Fetch user's complaints
+                const complaintsRef = collection(db, "complaints");
+                const q = query(complaintsRef, where("authorId", "==", userId), orderBy("createdAt", "desc"));
+                const complaintQuerySnap = await getDocs(q);
+
+                const userComplaints = [];
+                complaintQuerySnap.forEach(doc => {
+                    userComplaints.push({ id: doc.id, ...doc.data() });
+                });
+
+                // 3. Render stats and complaints
+                profilePostCount.textContent = userComplaints.length;
+                renderProfileComplaints(userComplaints);
+
+            } catch (error) {
+                console.error("Error loading profile:", error);
+                showToast("خطأ في تحميل صفحة الملف الشخصي.", true);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderProfileComplaints(complaints) {
+            profileComplaintsList.innerHTML = '';
+            if (complaints.length === 0) {
+                profileComplaintsList.innerHTML = `<p class="text-center text-slate-500">لم يقم هذا المستخدم بنشر أي شكاوى.</p>`;
+                return;
+            }
+
+            complaints.forEach(complaint => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-50 p-4 rounded-lg border border-slate-200';
+                const timeAgo = complaint.createdAt ? timeDifference(Date.now(), complaint.createdAt.toDate()) : '...';
+                const score = (complaint.upvotes || 0) - (complaint.downvotes || 0);
+                const isAnon = complaint.isAnonymous;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm font-semibold text-teal-700">${getCategoryName(complaint.category)}</span>
+                        ${isAnon ? '<span class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">نشر كمجهول</span>' : ''}
+                    </div>
+                    <p class="text-slate-800">${complaint.description.substring(0, 150)}...</p>
+                    <div class="flex justify-between items-center mt-3 text-sm text-slate-500">
+                        <span>${timeAgo}</span>
+                        <div class="flex gap-4">
+                            <span><i class="fa-solid fa-thumbs-up ml-1"></i> ${complaint.upvotes || 0}</span>
+                            <span><i class="fa-solid fa-thumbs-down ml-1"></i> ${complaint.downvotes || 0}</span>
+                            <a href="#complaint-detail?id=${complaint.id}" class="page-link font-semibold text-teal-600 hover:text-teal-800">
+                                عرض التفاصيل <i class="fa-solid fa-arrow-left mr-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                `;
+                profileComplaintsList.appendChild(card);
+            });
+        }
+
+
         // --- Init ---
         window.addEventListener('hashchange', handleHashChange);
-        handleHashChange(); // Trigger initial check
+        // Set grecaptcha when it loads
+        window.onload = () => {
+            if (window.grecaptcha) {
+                grecaptcha = window.grecaptcha;
+            }
+        };
+        // Trigger initial check
+        const initialHash = window.location.hash;
+        window.location.hash = ''; // Clear hash
+        window.location.hash = initialHash; // Set it back to trigger change
+        if (initialHash === '') {
+            handleHashChange(); // Handle empty hash case
+        }
 
     </script>
 </body>
