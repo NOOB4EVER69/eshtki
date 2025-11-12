@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- REMOVED: Dark mode class removed -->
 <html lang="ar" dir="rtl">
 
 <head>
@@ -8,8 +9,10 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 
+      REMOVED: Leaflet CSS and JS are now loaded dynamically (lazy-loaded)
+      to improve initial page load speed. See loadLeaflet() in the script.
+    -->
 
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -21,9 +24,12 @@
         /* Custom styles */
         body {
             font-family: 'Inter', 'Cairo', sans-serif;
-            background-color: #f8fafc;
-            /* Tailwind 'slate-50' */
+            /* NEW: Set to 'zinc-50' for a soft off-white */
+            background-color: #fafafa;
+            transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
         }
+
+        /* REMOVED: Dark mode base */
 
         /* Fix for Leaflet map height */
         #map,
@@ -36,7 +42,7 @@
             z-index: 10;
         }
 
-        /* NEW: Profile map */
+        /* Profile map */
         #profile-map {
             height: 250px;
             width: 100%;
@@ -65,6 +71,8 @@
             animation: spin 1s ease infinite;
         }
 
+        /* REMOVED: Dark mode spinner */
+
         @keyframes spin {
             0% {
                 transform: rotate(0deg);
@@ -83,12 +91,15 @@
             /* teal-600 */
         }
 
+        /* REMOVED: Dark mode btn-active */
+
         /* Vote status in comments */
         .vote-status {
             font-size: 0.75rem;
             padding: 2px 8px;
             border-radius: 12px;
-            margin-right: 8px;
+            margin-inline-end: 8px;
+            /* Use logical property */
         }
 
         .vote-status-agree {
@@ -96,34 +107,44 @@
             color: #166534;
         }
 
+        /* REMOVED: Dark mode vote-status-agree */
+
         .vote-status-disagree {
             background-color: #fee2e2;
             color: #dc2626;
         }
 
+        /* REMOVED: Dark mode vote-status-disagree */
+
         /* Report category colors */
         .category-traffic {
-            border-right: 4px solid #3b82f6;
+            border-inline-end: 4px solid #3b82f6;
+            /* Use logical property */
         }
 
         .category-noise {
-            border-right: 4px solid #f59e0b;
+            border-inline-end: 4px solid #f59e0b;
+            /* Use logical property */
         }
 
         .category-cleanliness {
-            border-right: 4px solid #10b981;
+            border-inline-end: 4px solid #10b981;
+            /* Use logical property */
         }
 
         .category-services {
-            border-right: 4px solid #8b5cf6;
+            border-inline-end: 4px solid #8b5cf6;
+            /* Use logical property */
         }
 
         .category-environment {
-            border-right: 4px solid #06b6d4;
+            border-inline-end: 4px solid #06b6d4;
+            /* Use logical property */
         }
 
         .category-safety {
-            border-right: 4px solid #ef4444;
+            border-inline-end: 4px solid #ef4444;
+            /* Use logical property */
         }
 
         /* Custom marker styles */
@@ -138,13 +159,46 @@
             /* blue-500 */
             font-size: 0.9em;
             /* Slightly smaller */
-            margin-right: 4px;
-            /* Space from name */
+            margin-inline-end: 4px;
+            /* Use logical property */
+        }
+
+        /* Mobile Nav Menu */
+        #mobile-menu {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        /* REMOVED: Dark mode for Leaflet map tiles */
+
+        /* NEW: Skeleton Loader styles */
+        .skeleton-card {
+            background-color: #ffffff;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* REMOVED: Dark mode skeleton-card */
+
+        .skeleton-line {
+            background-color: #e2e8f0;
+            /* slate-200 */
+            border-radius: 0.25rem;
+            height: 1rem;
+        }
+
+        /* REMOVED: Dark mode skeleton-line */
+
+        @keyframes pulse {
+            50% {
+                opacity: 0.5;
+            }
         }
     </style>
 </head>
 
-<body class="bg-slate-50 text-slate-800">
+<body class="bg-zinc-50 text-slate-800">
 
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
@@ -152,19 +206,39 @@
     </div>
 
     <!-- Toast Notification Container -->
-    <div id="toast-container" class="fixed top-5 right-5 z-50 space-y-2"></div>
+    <div id="toast-container" class="fixed top-5 end-5 z-50 space-y-2"></div>
 
     <!-- Navigation Bar -->
     <nav class="bg-white/90 backdrop-blur-sm shadow-md sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
+                <!-- Logo -->
                 <div class="flex items-center">
-                    <i class="fa-solid fa-bullhorn text-2xl text-teal-600 ml-2"></i>
+                    <!-- TODO: Replace this div with your <img> tag when you have a logo -->
+                    <div id="logo-container"
+                        class="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center text-white font-bold me-2 text-lg flex-shrink-0">
+                        E</div>
                     <span class="font-bold text-xl text-slate-800">Eshtki</span>
                 </div>
-                <div id="nav-links" class="hidden md:flex items-center gap-4">
+
+                <!-- Desktop Nav Links -->
+                <div id="nav-links-desktop" class="hidden md:flex items-center gap-4">
                     <!-- Nav links injected by JS -->
                 </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden flex items-center">
+                    <button id="mobile-menu-btn" class="text-slate-700 hover:text-teal-600 focus:outline-none">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu (Dropdown) -->
+        <div id="mobile-menu" class="md:hidden hidden bg-white shadow-lg absolute top-16 inset-x-0 z-30 p-4 border-t">
+            <div id="nav-links-mobile" class="flex flex-col gap-4">
+                <!-- Mobile nav links injected by JS -->
             </div>
         </div>
     </nav>
@@ -173,7 +247,7 @@
 
         <!-- Login Page -->
         <section id="login-page" class="page hidden">
-            <div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-xl">
+            <div class="max-w-md mx-auto bg-white p-6 md:p-8 rounded-xl shadow-xl">
                 <h2 class="text-2xl font-bold text-center mb-6">تسجيل الدخول</h2>
                 <form id="login-form" class="space-y-4">
                     <div>
@@ -202,7 +276,7 @@
 
         <!-- Registration Page -->
         <section id="register-page" class="page hidden">
-            <div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-xl">
+            <div class="max-w-md mx-auto bg-white p-6 md:p-8 rounded-xl shadow-xl">
                 <h2 class="text-2xl font-bold text-center mb-6">إنشاء حساب جديد</h2>
                 <form id="register-form" class="space-y-4">
                     <div>
@@ -284,10 +358,12 @@
             <!-- Filters and View Toggles -->
             <div
                 class="mb-6 bg-white p-4 rounded-xl shadow-md flex flex-col md:flex-row justify-between items-center gap-4">
-                <div class="flex flex-wrap gap-4">
+                <div class="flex flex-wrap gap-4 justify-center w-full md:w-auto">
+                    <!-- REMOVED: Governorate Filter -->
+
                     <!-- Category Filter -->
                     <select id="category-filter"
-                        class="border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                        class="w-full sm:w-auto border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 text-sm flex-grow">
                         <option value="all">كل الفئات</option>
                         <option value="traffic">المرور والطرق</option>
                         <option value="noise">الضوضاء والإزعاج</option>
@@ -310,9 +386,9 @@
                 <!-- View Toggle -->
                 <div class="flex bg-slate-100 p-1 rounded-lg">
                     <button id="feed-view-btn" class="view-btn btn-active px-4 py-1.5 rounded-md text-sm"><i
-                            class="fa-solid fa-list mr-2"></i>عرض كقائمة</button>
+                            class="fa-solid fa-list me-2"></i>عرض كقائمة</button>
                     <button id="map-view-btn" class="view-btn px-4 py-1.5 rounded-md text-sm text-slate-600"><i
-                            class="fa-solid fa-map mr-2"></i>عرض على
+                            class="fa-solid fa-map me-2"></i>عرض على
                         الخريطة</button>
                 </div>
             </div>
@@ -320,31 +396,43 @@
             <!-- Feed View -->
             <div id="feed-view">
                 <div id="complaints-feed" class="space-y-6">
-                    <!-- Complaints injected by JS -->
+                    <!-- Skeletons or Complaints injected by JS -->
                 </div>
             </div>
 
             <!-- Map View -->
-            <div id="map-view" class="hidden">
+            <div id="map-view" class="hidden relative">
                 <div id="map" class="rounded-xl shadow-lg"></div>
+
+                <!-- Map Legend -->
+                <!-- NEW: Moved to top-4 end-4 -->
+                <div id="map-legend" class="absolute top-4 end-4 bg-white p-3 rounded-lg shadow-lg z-20 border">
+                    <h4 class="font-bold text-sm mb-2">مفتاح الخريطة</h4>
+                    <ul class="space-y-1 text-xs">
+                        <!-- Legend items injected by JS -->
+                    </ul>
+                </div>
+
             </div>
 
             <!-- Add Complaint Button -->
+            <!-- NEW: Moved to bottom-4 end-4 -->
             <button id="show-submit-form-btn"
-                class="fixed bottom-8 right-8 bg-teal-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-3xl hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 z-30 transition transform hover:scale-110">
+                class="fixed bottom-4 end-4 bg-teal-600 text-white w-16 h-16 rounded-full shadow-lg flex items-center justify-center text-3xl hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 z-30 transition transform hover:scale-110">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </section>
 
         <!-- Submit Complaint Page -->
         <section id="submit-complaint-page" class="page hidden">
-            <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+            <div class="max-w-2xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
                 <h2 class="text-2xl font-bold mb-6">تقديم شكوى جديدة</h2>
                 <form id="submit-complaint-form" class="space-y-4">
                     <button type="button" class="page-link text-teal-600 hover:text-teal-800" data-target="main">
-                        <i class="fa-solid fa-arrow-right ml-2"></i> العودة للرئيسية
+                        <i class="fa-solid fa-arrow-right me-2"></i> العودة للرئيسية
                     </button>
 
+                    <!-- REMOVED: Governorate/Category grid -->
                     <div>
                         <label for="complaint-category" class="block text-sm font-medium text-slate-700">الفئة</label>
                         <select id="complaint-category" required
@@ -395,7 +483,7 @@
                     <div class="flex items-center">
                         <input id="complaint-anonymous" type="checkbox"
                             class="h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
-                        <label for="complaint-anonymous" class="ml-2 block text-sm text-slate-900">نشر الشكوى كمستخدم
+                        <label for="complaint-anonymous" class="ms-2 block text-sm text-slate-900">نشر الشكوى كمستخدم
                             مجهول</label>
                     </div>
                     <p class="text-xs text-slate-500">ملاحظة: حتى لو اخترت النشر كمجهول، ستظل هويتك الحقيقية معروفة
@@ -414,7 +502,7 @@
         <section id="complaint-detail-page" class="page hidden">
             <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
                 <button type="button" class="page-link text-teal-600 hover:text-teal-800 mb-4" data-target="main">
-                    <i class="fa-solid fa-arrow-right ml-2"></i> العودة للرئيسية
+                    <i class="fa-solid fa-arrow-right me-2"></i> العودة للرئيسية
                 </button>
 
                 <!-- Complaint Content -->
@@ -428,13 +516,14 @@
                 </div>
 
                 <!-- Complaint Map -->
-                <h3 class="text-xl font-bold mb-2 mt-6 pt-4 border-t border-gray-200">موقع الشكوى</h3>
+                <h3 class="text-xl font-bold mb-2 mt-6 pt-4 border-t border-gray-200">
+                    موقع الشكوى</h3>
                 <div id="detail-map" class="rounded-xl"></div>
 
                 <!-- Voting Section -->
                 <div class="my-6 border-t border-b py-4">
                     <h3 class="text-lg font-semibold mb-3">هل توافق على أن هذه مشكلة حقيقية؟</h3>
-                    <div class="flex space-rtl-4">
+                    <div class="flex space-x-4 space-x-reverse">
                         <button id="upvote-btn"
                             class="flex items-center gap-2 text-slate-600 hover:text-green-600 px-4 py-2 rounded-lg border border-gray-300 hover:border-green-500 transition transform hover:scale-105">
                             <i class="fa-solid fa-thumbs-up"></i>
@@ -456,7 +545,7 @@
 
                     <!-- Message shown if not voted -->
                     <p id="vote-message" class="text-sm text-teal-600 mb-4 p-3 bg-teal-50 rounded-lg hidden">
-                        <i class="fa-solid fa-lock ml-2"></i>
+                        <i class="fa-solid fa-lock me-2"></i>
                         يجب أن تصوت أولاً (أوافق / لا أوافق) قبل أن تتمكن من إضافة تعليق.
                     </p>
 
@@ -485,16 +574,27 @@
         <section id="profile-page" class="page hidden">
             <div class="max-w-3xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
                 <button type="button" class="page-link text-teal-600 hover:text-teal-800 mb-4" data-target="main">
-                    <i class="fa-solid fa-arrow-right ml-2"></i> العودة للرئيسية
+                    <i class="fa-solid fa-arrow-right me-2"></i> العودة للرئيسية
                 </button>
 
                 <!-- Profile Header -->
-                <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
+                <div id="profile-header-skeleton" class="hidden">
+                    <div class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
+                        <div class="w-16 h-16 bg-slate-200 rounded-full flex-shrink-0 skeleton-line">
+                        </div>
+                        <div class="flex-grow">
+                            <div class="skeleton-line h-6 w-1/2 mb-2"></div>
+                            <div class="skeleton-line h-4 w-1/4"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="profile-header-content" class="flex items-center gap-4 mb-6 pb-6 border-b border-gray-200">
                     <div
                         class="w-16 h-16 bg-slate-200 rounded-full flex-shrink-0 flex items-center justify-center text-slate-500">
                         <i class="fa-solid fa-user text-3xl"></i>
                     </div>
                     <div>
+                        <!-- NEW: Added "مرحباً" to the name -->
                         <h2 id="profile-name" class="text-2xl font-bold text-slate-800">جاري التحميل...</h2>
                         <div id="profile-verified-badge" class="hidden mt-1">
                             <span
@@ -513,22 +613,22 @@
                         <span class="text-sm text-slate-600">إجمالي الشكاوى</span>
                     </div>
                     <div class="bg-slate-50 p-4 rounded-lg text-center">
-                        <span class="block text-2xl font-bold text-green-600" id="profile-agree-count">...</span>
+                        <span class="block text-2xl font-bold text-green-600" id="profile-agree-count">0</span>
                         <span class="text-sm text-slate-600">مرة "أوافق"</span>
                     </div>
                     <div class="bg-slate-50 p-4 rounded-lg text-center">
-                        <span class="block text-2xl font-bold text-red-600" id="profile-disagree-count">...</span>
+                        <span class="block text-2xl font-bold text-red-600" id="profile-disagree-count">0</span>
                         <span class="text-sm text-slate-600">مرة "لا أوافق"</span>
                     </div>
                 </div>
-                <p class="text-xs text-center text-slate-400 -mt-4 mb-6">(إحصائيات التصويت قيد الإنشاء)</p>
-
 
                 <!-- User's Posts -->
-                <h3 class="text-xl font-bold mb-4">شكاوى هذا المستخدم</h3>
+                <h3 class="text-xl font-bold mb-4">شكاوى هذا المستخدم (العلنية)</h3>
                 <div id="profile-complaints-list" class="space-y-4">
-                    <!-- User's complaints injected by JS -->
+                    <!-- Skeletons or complaints injected by JS -->
                 </div>
+
+
             </div>
         </section>
 
@@ -561,7 +661,8 @@
             serverTimestamp,
             writeBatch,
             runTransaction,
-            updateDoc
+            updateDoc,
+            increment
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ========================================================================
@@ -583,10 +684,28 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Global state
+        // --- NEW: App Constants ---
+        // REMOVED: GOVERNORATES
+        // prettier-ignore
+        const CATEGORIES = {
+            traffic: { name: "المرور والطرق", icon: "fa-car", color: "#3b82f6" },
+            noise: { name: "الضوضاء والإزعاج", icon: "fa-volume-high", color: "#f59e0b" },
+            cleanliness: { name: "النظافة العامة", icon: "fa-trash", color: "#10b981" },
+            services: { name: "الخدمات الحكومية", icon: "fa-building-columns", color: "#8b5cf6" },
+            environment: { name: "البيئة والصحة", icon: "fa-leaf", color: "#06b6d4" },
+            safety: { name: "الأمن والأمان", icon: "fa-shield-halved", color: "#ef4444" }
+        };
+
+        // --- Global state ---
         let currentUser = null; // Will store { ...user, fullName, isVerified }
         let currentComplaintId = null;
-        let currentProfileId = null; // NEW: For profile page
+        let currentProfileId = null; // For profile page
+        let currentSort = 'newest';
+        let grecaptcha = window.grecaptcha || null; // For reCAPTCHA
+
+        // Map state
+        let L = window.L; // Leaflet global
+        let leafletLoaded = false;
         let mainMap = null;
         let submitMap = null;
         let detailMap = null;
@@ -594,14 +713,18 @@
         let detailMarker = null;
         let complaintMarkers = {};
         let complaintListeners = []; // To unsubscribe from listeners
-        let currentSort = 'newest';
-        let grecaptcha = window.grecaptcha || null; // For reCAPTCHA
 
-        // DOM Elements
+        // --- DOM Elements ---
         const loadingOverlay = document.getElementById('loading-overlay');
         const toastContainer = document.getElementById('toast-container');
-        const navLinks = document.getElementById('nav-links');
         const pages = document.querySelectorAll('.page');
+        // REMOVED: htmlElement
+
+        // Nav
+        const navLinksDesktop = document.getElementById('nav-links-desktop');
+        const navLinksMobile = document.getElementById('nav-links-mobile');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
 
         // Auth
         const loginForm = document.getElementById('login-form');
@@ -620,9 +743,11 @@
         const mapView = document.getElementById('map-view');
         const complaintsFeed = document.getElementById('complaints-feed');
         const categoryFilter = document.getElementById('category-filter');
+        // REMOVED: governorateFilter
         const sortNewestBtn = document.getElementById('sort-newest-btn');
         const sortHotBtn = document.getElementById('sort-hot-btn');
         const sortBtns = document.querySelectorAll('.sort-btn');
+        const mapLegend = document.getElementById('map-legend').querySelector('ul');
 
         // Submit Page
         const showSubmitFormBtn = document.getElementById('show-submit-form-btn');
@@ -632,6 +757,7 @@
         const locationCoords = document.getElementById('location-coords');
         const complaintImageUrl = document.getElementById('complaint-image-url');
         const complaintVideoUrl = document.getElementById('complaint-video-url');
+        // REMOVED: complaintGovernorate
 
         // Detail Page
         const complaintDetailContent = document.getElementById('complaint-detail-content');
@@ -645,11 +771,16 @@
         const commentForm = document.getElementById('comment-form');
         const commentsList = document.getElementById('comments-list');
 
-        // NEW: Profile Page
+        // Profile Page
+        const profileHeaderSkeleton = document.getElementById('profile-header-skeleton');
+        const profileHeaderContent = document.getElementById('profile-header-content');
         const profileName = document.getElementById('profile-name');
         const profileVerifiedBadge = document.getElementById('profile-verified-badge');
         const profilePostCount = document.getElementById('profile-post-count');
+        const profileAgreeCount = document.getElementById('profile-agree-count');
+        const profileDisagreeCount = document.getElementById('profile-disagree-count');
         const profileComplaintsList = document.getElementById('profile-complaints-list');
+        const profileLogoutBtn = document.getElementById('profile-logout-btn'); // NEW
 
 
         // --- Utility Functions ---
@@ -661,6 +792,7 @@
             const toast = document.createElement('div');
             const icon = isError ? 'fa-solid fa-circle-xmark' : 'fa-solid fa-circle-check';
             const bgColor = isError ? 'bg-red-500' : 'bg-green-500';
+            // REMOVED: darkBgColor
 
             toast.className = `flex items-center gap-3 p-4 rounded-lg shadow-lg text-white ${bgColor} transform transition-all duration-300 ease-in-out translate-x-full opacity-0`;
             toast.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
@@ -681,9 +813,60 @@
             }, 3000);
         }
 
+        // --- REMOVED: Dark Mode ---
+        // REMOVED: applyTheme()
+        // REMOVED: toggleTheme()
+        // REMOVED: initTheme()
+
+        // --- NEW: Lazy Load Leaflet ---
+        async function loadLeaflet() {
+            if (leafletLoaded) {
+                L = window.L;
+                if (L) return Promise.resolve();
+                // If L is somehow gone, reset
+                leafletLoaded = false;
+            }
+
+            console.log("Loading Leaflet...");
+            // Show a subtle loading indicator
+            loadingOverlay.classList.remove('hidden');
+
+            return new Promise((resolve, reject) => {
+                // 1. Load CSS
+                if (!document.querySelector('link[href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"]')) {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                    document.head.appendChild(link);
+                }
+
+                // 2. Load JS
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                script.async = true;
+
+                script.onload = () => {
+                    console.log("Leaflet JS loaded.");
+                    L = window.L; // Assign to global
+                    leafletLoaded = true;
+                    loadingOverlay.classList.add('hidden');
+                    resolve();
+                };
+
+                script.onerror = () => {
+                    console.error("Failed to load Leaflet JS.");
+                    loadingOverlay.classList.add('hidden');
+                    reject("Failed to load Leaflet JS.");
+                };
+
+                document.body.appendChild(script);
+            });
+        }
+
+
         // --- Page/Routing ---
 
-        function showPage(pageId) {
+        async function showPage(pageId) {
             pages.forEach(page => page.classList.add('hidden'));
             const activePage = document.getElementById(`${pageId}-page`);
             if (activePage) {
@@ -692,20 +875,26 @@
                 // Special actions on page show
                 if (pageId === 'main') {
                     showSubmitFormBtn.classList.remove('hidden');
-                    if (!mainMap) {
-                        initMainMap();
+                    if (mapView.classList.contains('hidden')) {
+                        // Feed view is active, just fetch complaints
+                        fetchComplaints(); // Re-fetch complaints
+                    } else {
+                        // Map view is active, load map
+                        if (!mainMap) {
+                            await initMainMap();
+                        }
+                        setTimeout(() => {
+                            if (mainMap) mainMap.invalidateSize();
+                        }, 300);
+                        fetchComplaints(); // Re-fetch complaints
                     }
-                    setTimeout(() => {
-                        if (mainMap) mainMap.invalidateSize();
-                    }, 300);
-                    fetchComplaints(); // Re-fetch complaints
                 } else {
                     showSubmitFormBtn.classList.add('hidden');
                 }
 
                 if (pageId === 'submit-complaint') {
                     if (!submitMap) {
-                        initSubmitMap();
+                        await initSubmitMap();
                     }
                     setTimeout(() => {
                         if (submitMap) submitMap.invalidateSize();
@@ -721,14 +910,16 @@
                     fetchComplaintDetails();
                 }
 
-                // NEW: Profile page logic
                 if (pageId === 'profile') {
                     loadProfilePage();
                 }
             }
+            // Close mobile menu on page change
+            mobileMenu.classList.add('hidden');
+            mobileMenuBtn.innerHTML = `<i class="fa-solid fa-bars text-xl"></i>`;
         }
 
-        function handleHashChange() {
+        async function handleHashChange() {
             const hash = window.location.hash.substring(1) || 'login';
             const pageId = hash.split('?')[0]; // Get page ID, e.g., 'profile'
             const urlParams = new URLSearchParams(hash.split('?')[1]); // Get query params
@@ -747,22 +938,22 @@
                 const allowedPages = ['main', 'submit-complaint', 'complaint-detail', 'profile'];
                 if (allowedPages.includes(pageId)) {
                     if (pageId === 'complaint-detail' && !currentComplaintId) {
-                        showPage('main');
+                        await showPage('main');
                     } else {
-                        showPage(pageId);
+                        await showPage(pageId);
                     }
                 } else {
                     window.location.hash = 'main';
-                    showPage('main');
+                    await showPage('main');
                 }
             } else {
                 // Not logged in
                 const allowedPages = ['login', 'register', 'email-verify'];
                 if (allowedPages.includes(pageId)) {
-                    showPage(pageId);
+                    await showPage(pageId);
                 } else {
                     window.location.hash = 'login';
-                    showPage('login');
+                    await showPage('login');
                 }
             }
         }
@@ -783,7 +974,7 @@
 
         // --- Authentication ---
 
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user && user.emailVerified) { // Only consider user "logged in" if email is verified
                 console.log("User logged in and verified:", user.uid);
 
@@ -812,12 +1003,12 @@
                     if (window.location.hash === '#login' || window.location.hash === '#register' || window.location.hash === '') {
                         window.location.hash = 'main';
                     }
-                    handleHashChange();
+                    handleHashChange(); // Now async
 
                 }).catch(err => {
                     console.error("Error fetching user doc:", err);
                     updateNav(user, user.displayName || user.email);
-                    handleHashChange();
+                    handleHashChange(); // Now async
                 });
             } else {
                 if (user && !user.emailVerified) {
@@ -836,31 +1027,65 @@
                 if (!['login', 'register', 'email-verify'].includes(currentHash.split('?')[0])) {
                     window.location.hash = 'login';
                 }
-                handleHashChange();
+                await handleHashChange(); // Now async
             }
         });
 
+        // --- NEW: Simplified Nav ---
         function updateNav(user, fullName) {
-            navLinks.innerHTML = '';
+            const nameToShow = fullName || user?.email;
+            // REMOVED: Theme logic
+            let desktopHTML = '';
+            let mobileHTML = '';
+
             if (user) {
-                const nameToShow = fullName || user.email;
-                navLinks.innerHTML = `
-                    <span classclass="text-slate-700 font-medium hidden md:inline">مرحباً، ${nameToShow}</span>
-                    <a href="#main" class="page-link text-slate-700 hover:text-teal-600 px-2 py-1">الرئيسية</a>
-                    <!-- NEW: Profile Link -->
-                    <a href="#profile?id=${user.uid}" class="page-link text-slate-700 hover:text-teal-600 px-2 py-1">ملفي الشخصي</a>
-                    <button id="logout-btn" class="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-medium hover:bg-red-600 transition transform hover:scale-105">خروج</button>
+                desktopHTML = `
+                    <a href="#main" class="page-link text-slate-700 hover:text-teal-600 px-3 py-2 rounded-lg text-sm font-medium">الرئيسية</a>
+                    <a href="#profile?id=${user.uid}" class="page-link text-slate-700 hover:text-teal-600 px-3 py-2 rounded-lg text-sm font-medium">ملفي الشخصي</a>
+                    <button id="logout-btn-desktop" class="bg-red-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-600 transition">تسجيل الخروج</button>
                 `;
-                document.getElementById('logout-btn').addEventListener('click', () => {
-                    signOut(auth);
-                });
+                mobileHTML = `
+                    <a href="#main" class="page-link text-slate-700 hover:bg-slate-100 px-2 py-2 rounded-md block">الرئيسية</a>
+                    <a href="#profile?id=${user.uid}" class="page-link text-slate-700 hover:bg-slate-100 px-2 py-2 rounded-md block">ملفي الشخصي</a>
+                    <button id="logout-btn-mobile" class="w-full text-start bg-red-500/10 text-red-600 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-500/20 mt-2">تسجيل الخروج</button>
+                `;
             } else {
-                navLinks.innerHTML = `
-                    <a href="#login" class="page-link text-slate-700 hover:text-teal-600">دخول</a>
-                    <a href="#register" class="page-link text-teal-600 bg-teal-100 px-3 py-1 rounded-lg text-sm font-medium hover:bg-teal-200">إنشاء حساب</a>
+                desktopHTML = `
+                    <a href="#login" class="page-link text-slate-700 hover:text-teal-600 px-3 py-2 rounded-lg text-sm font-medium">دخول</a>
+                    <a href="#register" class="page-link text-teal-600 bg-teal-100 px-3 py-2 rounded-lg text-sm font-medium hover:bg-teal-200">إنشاء حساب</a>
+                `;
+                mobileHTML = `
+                    <a href="#login" class="page-link text-slate-700 hover:bg-slate-100 px-2 py-2 rounded-md block">دخول</a>
+                    <a href="#register" class="page-link text-teal-600 bg-teal-100 px-3 py-2 rounded-lg text-sm font-medium hover:bg-teal-200 block">إنشاء حساب</a>
                 `;
             }
+
+            navLinksDesktop.innerHTML = desktopHTML;
+            navLinksMobile.innerHTML = mobileHTML;
+
+            // Add listeners for new buttons
+            addNavListeners();
         }
+
+        function addNavListeners() {
+            // Logout
+            document.getElementById('logout-btn-desktop')?.addEventListener('click', () => signOut(auth));
+            document.getElementById('logout-btn-mobile')?.addEventListener('click', () => signOut(auth));
+
+            // REMOVED: Theme Toggles
+            // REMOVED: Profile Dropdown
+        }
+
+        // Mobile Menu Toggle
+        mobileMenuBtn.addEventListener('click', () => {
+            if (mobileMenu.classList.contains('hidden')) {
+                mobileMenu.classList.remove('hidden');
+                mobileMenuBtn.innerHTML = `<i class="fa-solid fa-times text-xl"></i>`;
+            } else {
+                mobileMenu.classList.add('hidden');
+                mobileMenuBtn.innerHTML = `<i class="fa-solid fa-bars text-xl"></i>`;
+            }
+        });
 
 
         loginForm.addEventListener('submit', async (e) => {
@@ -946,7 +1171,9 @@
                     createdAt: serverTimestamp(),
                     birthDate: nidValidation.data.birthDate.toISOString(),
                     governorate: nidValidation.data.governorate,
-                    isVerified: false
+                    isVerified: false,
+                    agreeCount: 0, // NEW: Initialize vote count
+                    disagreeCount: 0 // NEW: Initialize vote count
                 });
 
                 await sendEmailVerification(user);
@@ -1011,7 +1238,8 @@
                 return { valid: false, error: "تاريخ الميلاد غير صالح." };
             }
 
-            const governorates = {
+            // Simplified gov map
+            const govMap = {
                 1: "القاهرة", 2: "الإسكندرية", 3: "بورسعيد", 4: "السويس", 11: "دمياط",
                 12: "الدقهلية", 13: "الشرقية", 14: "القليوبية", 15: "كفر الشيخ", 16: "الغربية",
                 17: "المنوفية", 18: "البحيرة", 19: "الإسماعيلية", 21: "الجيزة", 22: "بني سويف",
@@ -1019,17 +1247,18 @@
                 29: "الأقصر", 31: "البحر الأحمر", 32: "الوادي الجديد", 33: "مطروح", 34: "شمال سيناء",
                 35: "جنوب سيناء", 88: "خارج الجمهورية"
             };
-            const govName = governorates[govCode];
-            if (!govName) {
+            const officialGovName = govMap[govCode];
+            if (!officialGovName) {
                 return { valid: false, error: "كود المحافظة (الرقم 8 و 9) غير صالح." };
             }
 
-            return { valid: true, data: { birthDate: birthDate, governorate: govName } };
+            return { valid: true, data: { birthDate: birthDate, governorate: officialGovName } };
         }
 
         // --- Maps ---
 
-        function initMainMap() {
+        async function initMainMap() {
+            await loadLeaflet();
             if (mainMap) mainMap.remove();
             mainMap = L.map('map').setView([30.0444, 31.2357], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1037,7 +1266,8 @@
             }).addTo(mainMap);
         }
 
-        function initSubmitMap() {
+        async function initSubmitMap() {
+            await loadLeaflet();
             if (submitMap) submitMap.remove();
             submitMap = L.map('submit-map').setView([30.0444, 31.2357], 12);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(submitMap);
@@ -1058,7 +1288,8 @@
             });
         }
 
-        function initDetailMap(location) {
+        async function initDetailMap(location) {
+            await loadLeaflet();
             if (detailMap) {
                 detailMap.remove();
                 detailMap = null;
@@ -1089,26 +1320,21 @@
             Object.values(complaintMarkers).forEach(marker => marker.remove());
             complaintMarkers = {};
 
-            const categoryColors = {
-                traffic: '#3b82f6', noise: '#f59e0b', cleanliness: '#10b981',
-                services: '#8b5cf6', environment: '#06b6d4', safety: '#ef4444'
-            };
-
             complaints.forEach(complaint => {
                 if (complaint.location) {
                     const { lat, lng } = complaint.location;
-                    const color = categoryColors[complaint.category] || 'gray';
+                    const color = CATEGORIES[complaint.category]?.color || 'gray';
 
                     const marker = L.marker([lat, lng], {
                         icon: L.divIcon({
-                            html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`,
+                            html: `<div style="background-color: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>`,
                             className: 'category-marker',
                             iconSize: [16, 16]
                         })
                     }).addTo(mainMap);
 
                     marker.bindPopup(`
-                        <b>${getCategoryName(complaint.category)}</b>
+                        <b style="color: ${color}">${getCategoryName(complaint.category)}</b>
                         <p>${complaint.description.substring(0, 50)}...</p>
                         <a href="#complaint-detail?id=${complaint.id}" class="page-link text-teal-600">عرض التفاصيل</a>
                     `);
@@ -1120,7 +1346,7 @@
         // --- View & Sort Toggles ---
 
         viewBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 viewBtns.forEach(b => b.classList.remove('btn-active'));
                 btn.classList.add('btn-active');
 
@@ -1130,7 +1356,12 @@
                 } else {
                     feedView.classList.add('hidden');
                     mapView.classList.remove('hidden');
-                    if (mainMap) mainMap.invalidateSize();
+                    if (!mainMap) {
+                        await initMainMap();
+                        fetchComplaints(); // Markers won't be ready, need to fetch again
+                    } else {
+                        mainMap.invalidateSize();
+                    }
                 }
             });
         });
@@ -1155,13 +1386,25 @@
         function fetchComplaints() {
             if (!currentUser) return;
             cleanupListeners();
-            showLoading();
+            // NEW: Show skeletons instead of global spinner
+            renderFeedSkeletons();
 
             let complaintsQuery = collection(db, "complaints");
             const category = categoryFilter.value;
+            // REMOVED: governorate
+
+            // Build query with filters
+            let filters = [];
             if (category !== 'all') {
-                complaintsQuery = query(complaintsQuery, where("category", "==", category));
+                filters.push(where("category", "==", category));
             }
+            // REMOVED: governorate filter logic
+
+            if (filters.length > 0) {
+                complaintsQuery = query(complaintsQuery, ...filters);
+            }
+            // REMOVED: composite index warning
+
 
             const unsubscribe = onSnapshot(complaintsQuery, (querySnapshot) => {
                 const complaints = [];
@@ -1169,9 +1412,11 @@
                     complaints.push({ id: doc.id, ...doc.data() });
                 });
 
+                // Client-side sorting
                 if (currentSort === 'newest') {
                     complaints.sort((a, b) => (b.createdAt?.toDate() || 0) - (a.createdAt?.toDate() || 0));
                 } else if (currentSort === 'hot') {
+                    // Sort by highest score (up - down)
                     complaints.sort((a, b) => {
                         const scoreA = (a.upvotes || 0) - (a.downvotes || 0);
                         const scoreB = (b.upvotes || 0) - (b.downvotes || 0);
@@ -1180,11 +1425,13 @@
                 }
 
                 renderComplaintsFeed(complaints);
-                updateMainMapMarkers(complaints);
-                hideLoading();
+                if (!mapView.classList.contains('hidden') && mainMap) {
+                    updateMainMapMarkers(complaints);
+                }
+                // Skeletons are cleared by renderComplaintsFeed
             }, (error) => {
                 console.error("Error fetching complaints:", error);
-                hideLoading();
+                complaintsFeed.innerHTML = `<p class="text-center text-red-500">خطأ في تحميل الشكاوى.</p>`;
                 showToast("خطأ في تحميل الشكاوى.", true);
             });
 
@@ -1192,25 +1439,62 @@
         }
 
         categoryFilter.addEventListener('change', fetchComplaints);
+        // REMOVED: governorateFilter listener
 
         function getCategoryName(key) {
-            const categories = {
-                traffic: "المرور والطرق", noise: "الضوضاء والإزعاج", cleanliness: "النظافة العامة",
-                services: "الخدمات الحكومية", environment: "البيئة والصحة", safety: "الأمن والأمان"
-            };
-            return categories[key] || "فئة غير معروفة";
+            return CATEGORIES[key]?.name || "فئة غير معروفة";
         }
 
         function getCategoryIcon(key) {
-            const icons = {
-                traffic: "fa-car", noise: "fa-volume-high", cleanliness: "fa-trash",
-                services: "fa-building-columns", environment: "fa-leaf", safety: "fa-shield-halved"
-            };
-            return icons[key] || "fa-question";
+            return CATEGORIES[key]?.icon || "fa-question";
+        }
+
+        // --- NEW: Skeleton Loaders ---
+        function renderFeedSkeletons() {
+            complaintsFeed.innerHTML = ''; // Clear existing
+            for (let i = 0; i < 3; i++) {
+                const skeleton = document.createElement('div');
+                skeleton.className = 'skeleton-card';
+                skeleton.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full skeleton-line"></div>
+                        <div class="flex-grow">
+                            <div class="skeleton-line h-4 w-1/3 mb-2"></div>
+                            <div class="skeleton-line h-3 w-1/2"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-line h-4 w-full mt-4"></div>
+                    <div class="skeleton-line h-4 w-3/4 mt-2"></div>
+                    <div class="flex justify-between items-center mt-4 pt-3 border-t border-gray-100">
+                        <div class="skeleton-line h-5 w-1/4"></div>
+                        <div class="skeleton-line h-5 w-1/4"></div>
+                    </div>
+                `;
+                complaintsFeed.appendChild(skeleton);
+            }
+        }
+
+        function renderProfileSkeletons() {
+            // Show header skeleton
+            profileHeaderContent.classList.add('hidden');
+            profileHeaderSkeleton.classList.remove('hidden');
+
+            // Show list skeletons
+            profileComplaintsList.innerHTML = '';
+            for (let i = 0; i < 2; i++) {
+                const skeleton = document.createElement('div');
+                skeleton.className = 'bg-slate-50 p-4 rounded-lg border border-slate-200 skeleton-card';
+                skeleton.innerHTML = `
+                    <div class="skeleton-line h-4 w-1/3 mb-3"></div>
+                    <div class="skeleton-line h-4 w-full mb-2"></div>
+                    <div class="skeleton-line h-4 w-1/2"></div>
+                `;
+                profileComplaintsList.appendChild(skeleton);
+            }
         }
 
         function renderComplaintsFeed(complaints) {
-            complaintsFeed.innerHTML = '';
+            complaintsFeed.innerHTML = ''; // Clear skeletons
             if (complaints.length === 0) {
                 complaintsFeed.innerHTML = `<p class="text-center text-slate-500">لا توجد شكاوى تطابق هذا الفلتر.</p>`;
                 return;
@@ -1218,11 +1502,12 @@
 
             complaints.forEach(complaint => {
                 const complaintCard = document.createElement('div');
-                complaintCard.className = `bg-white p-5 rounded-xl shadow-lg transition transform hover:shadow-xl category-${complaint.category}`;
+                // REMOVED: dark mode classes
+                complaintCard.className = `bg-white p-5 rounded-xl shadow-lg transition-all duration-300 ease-in-out transform hover:shadow-xl hover:-translate-y-1 category-${complaint.category}`;
 
                 const timeAgo = complaint.createdAt ? timeDifference(Date.now(), complaint.createdAt.toDate()) : 'منذ فترة';
 
-                // NEW: Add verified badge check and profile link
+                // Add verified badge check and profile link
                 let authorDisplay;
                 if (complaint.isAnonymous) {
                     authorDisplay = "مستخدم مجهول";
@@ -1251,6 +1536,7 @@
                                 ${authorDisplay}
                                 <div class="flex items-center gap-2 text-xs text-slate-500">
                                     <span>${getCategoryName(complaint.category)}</span>
+                                    <!-- REMOVED: governorate -->
                                     <span>&middot;</span>
                                     <span>${timeAgo}</span>
                                 </div>
@@ -1285,7 +1571,7 @@
                             </a>
                         </div>
                         <a href="#complaint-detail?id=${complaint.id}" class="page-link text-teal-600 hover:text-teal-800 text-sm font-semibold">
-                            عرض التفاصيل <i class="fa-solid fa-arrow-left mr-1"></i>
+                            عرض التفاصيل <i class="fa-solid fa-arrow-left me-1"></i>
                         </a>
                     </div>
                 `;
@@ -1311,7 +1597,7 @@
             const elapsed = current - previous;
             if (elapsed < msPerMinute) { return 'الآن'; }
             else if (elapsed < msPerHour) { return 'منذ ' + Math.round(elapsed / msPerMinute) + ' د'; }
-            else if (elapsed < msPerDay) { return 'منذ ' + Math.round(elapsed / msPerHour) + ' س'; }
+            else if (elapsed < msPerDay) { return 'منذ ' }
             else if (elapsed < msPerMonth) { return 'منذ ' + Math.round(elapsed / msPerDay) + ' ي'; }
             else if (elapsed < msPerYear) { return 'منذ ' + Math.round(elapsed / msPerMonth) + ' ش'; }
             else { return 'منذ ' + Math.round(elapsed / msPerYear) + ' س'; }
@@ -1335,6 +1621,7 @@
             submitBtn.disabled = true;
 
             const category = document.getElementById('complaint-category').value;
+            // REMOVED: governorate
             const description = document.getElementById('complaint-description').value;
             const isAnonymous = document.getElementById('complaint-anonymous').checked;
             const imageUrl = complaintImageUrl.value || null;
@@ -1343,8 +1630,14 @@
             try {
                 const isVerified = currentUser.isVerified || false;
 
+                // Fetch user's governorate from their profile
+                const userDocRef = doc(db, "users", currentUser.uid);
+                const userDocSnap = await getDoc(userDocRef);
+                const userGovernorate = userDocSnap.exists() ? userDocSnap.data().governorate : null;
+
                 await addDoc(collection(db, "complaints"), {
                     category: category,
+                    governorate: userGovernorate, // NEW: Add user's governorate automatically
                     description: description,
                     location: {
                         lat: parseFloat(complaintLat.value),
@@ -1396,12 +1689,12 @@
                 detailMap = null;
                 detailMarker = null;
             }
-            showLoading();
+            showLoading(); // Use global spinner here, not skeleton
             cleanupListeners();
 
             const complaintRef = doc(db, "complaints", currentComplaintId);
 
-            const unsubComplaint = onSnapshot(complaintRef, (docSnap) => {
+            const unsubComplaint = onSnapshot(complaintRef, async (docSnap) => {
                 if (docSnap.exists()) {
                     const complaintData = docSnap.data();
                     renderComplaintDetail(complaintData, docSnap.id);
@@ -1409,7 +1702,7 @@
                     const mapContainer = document.getElementById('detail-map');
                     if (complaintData.location && complaintData.location.lat && complaintData.location.lng) {
                         mapContainer.classList.remove('hidden');
-                        initDetailMap(complaintData.location);
+                        await initDetailMap(complaintData.location);
                     } else {
                         mapContainer.classList.add('hidden');
                     }
@@ -1446,7 +1739,7 @@
         }
 
         function renderComplaintDetail(complaint, id) {
-            // NEW: Add verified badge check and profile link
+            // Add verified badge check and profile link
             let authorDisplay;
             if (complaint.isAnonymous) {
                 authorDisplay = "مستخدم مجهول";
@@ -1462,11 +1755,12 @@
             complaintDetailContent.innerHTML = `
                 <div class="flex justify-between items-center mb-2">
                     <span class="px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm font-semibold">
-                        <i class="fa-solid ${getCategoryIcon(complaint.category)} ml-1"></i>
+                        <i class="fa-solid ${getCategoryIcon(complaint.category)} me-1"></i>
                         ${getCategoryName(complaint.category)}
                     </span>
                     <span class="text-sm text-slate-500">${timeAgo}</span>
                 </div>
+                <!-- REMOVED: Show governorate -->
                 <p class="text-slate-800 my-4 text-lg leading-relaxed">${complaint.description}</p>
                 <div class="text-sm text-slate-600">بواسطة: ${authorDisplay}</div>
             `;
@@ -1484,7 +1778,7 @@
                 if (complaint.videoUrl) {
                     mediaHTML += `
                         <a href="${complaint.videoUrl}" target="_blank" class="flex items-center text-teal-600 hover:text-teal-800 text-sm font-medium">
-                            <i class="fa-solid fa-video ml-2"></i> رابط الفيديو المرفق
+                            <i class="fa-solid fa-video me-2"></i> رابط الفيديو المرفق
                         </a>
                     `;
                 }
@@ -1501,6 +1795,7 @@
 
             upvoteBtn.classList.remove('bg-green-100', 'text-green-700', 'border-green-500');
             downvoteBtn.classList.remove('bg-red-100', 'text-red-700', 'border-red-500');
+            // REMOVED: dark mode classes
 
             if (myVote) {
                 if (myVote === 'up') {
@@ -1528,6 +1823,7 @@
 
             showLoading();
             const complaintRef = doc(db, "complaints", currentComplaintId);
+            const userRef = doc(db, "users", currentUser.uid); // User ref
 
             try {
                 await runTransaction(db, async (transaction) => {
@@ -1545,10 +1841,17 @@
 
                     let newUpvotes = data.upvotes || 0;
                     let newDownvotes = data.downvotes || 0;
-
                     voteMap[currentUser.uid] = voteType;
-                    if (voteType === 'up') newUpvotes++;
-                    if (voteType === 'down') newDownvotes++;
+
+                    // Update user's vote counts
+                    if (voteType === 'up') {
+                        newUpvotes++;
+                        transaction.update(userRef, { agreeCount: increment(1) });
+                    }
+                    if (voteType === 'down') {
+                        newDownvotes++;
+                        transaction.update(userRef, { disagreeCount: increment(1) });
+                    }
 
                     transaction.update(complaintRef, {
                         voteMap: voteMap,
@@ -1631,7 +1934,7 @@
                     voteStatus = `<span class="vote-status ${voteClass}">${voteText}</span>`;
                 }
 
-                // NEW: Add verified badge check and profile link
+                // Add verified badge check and profile link
                 const authorName = comment.authorName || "مستخدم";
                 const verifiedBadge = comment.authorIsVerified ?
                     '<i class="fa-solid fa-check-circle verified-badge" title="حساب موثق"></i>' : '';
@@ -1659,7 +1962,7 @@
             });
         }
 
-        // --- NEW: Profile Page ---
+        // --- Profile Page ---
 
         async function loadProfilePage() {
             // Get profile ID from global state (set by hash change) or use current user
@@ -1670,32 +1973,47 @@
                 return;
             }
 
-            showLoading();
-            // Reset page
-            profileName.textContent = 'جاري التحميل...';
+            // NEW: Show skeletons
+            renderProfileSkeletons();
+            // Reset page (in case skeletons don't cover everything)
+            profileName.textContent = '...';
             profileVerifiedBadge.classList.add('hidden');
-            profilePostCount.textContent = '0';
-            profileComplaintsList.innerHTML = '';
+            profilePostCount.textContent = '...';
+            profileAgreeCount.textContent = '...';
+            profileDisagreeCount.textContent = '...';
 
             try {
                 // 1. Fetch user data
                 const userDocRef = doc(db, "users", userId);
                 const userDocSnap = await getDoc(userDocRef);
 
+                // Show header content, hide skeleton
+                profileHeaderContent.classList.remove('hidden');
+                profileHeaderSkeleton.classList.add('hidden');
+
                 if (userDocSnap.exists()) {
                     const userData = userDocSnap.data();
-                    profileName.textContent = userData.fullName;
+                    // NEW: Add "مرحباً"
+                    profileName.textContent = `مرحباً، ${userData.fullName}`;
                     if (userData.isVerified) {
                         profileVerifiedBadge.classList.remove('hidden');
                     }
+                    profileAgreeCount.textContent = userData.agreeCount || 0;
+                    profileDisagreeCount.textContent = userData.disagreeCount || 0;
+
                 } else {
                     profileName.textContent = 'مستخدم غير معروف';
                     showToast("User not found.", true);
                 }
 
-                // 2. Fetch user's complaints
+                // 2. Fetch user's complaints (NON-ANONYMOUS ONLY)
                 const complaintsRef = collection(db, "complaints");
-                const q = query(complaintsRef, where("authorId", "==", userId), orderBy("createdAt", "desc"));
+                const q = query(complaintsRef,
+                    where("authorId", "==", userId),
+                    where("isAnonymous", "==", false),
+                    orderBy("createdAt", "desc")
+                );
+
                 const complaintQuerySnap = await getDocs(q);
 
                 const userComplaints = [];
@@ -1705,20 +2023,28 @@
 
                 // 3. Render stats and complaints
                 profilePostCount.textContent = userComplaints.length;
-                renderProfileComplaints(userComplaints);
+                renderProfileComplaints(userComplaints); // This will clear skeletons
 
             } catch (error) {
                 console.error("Error loading profile:", error);
-                showToast("خطأ في تحميل صفحة الملف الشخصي.", true);
+                if (error.code === 'failed-precondition') {
+                    profileComplaintsList.innerHTML = `<p class="text-center text-red-500">خطأ: يتطلب هذا الاستعلام فهرسًا. راجع الكونسول.</p>`;
+                    showToast("خطأ: يتطلب هذا الاستعلام فهرسًا. راجع وحدة التحكم.", true);
+                    console.error("FIRESTORE INDEX REQUIRED: Go to Firestore > Indexes and create a composite index for 'complaints' on [authorId (ASC), isAnonymous (ASC), createdAt (DESC)]");
+                } else {
+                    showToast("خطأ في تحميل صفحة الملف الشخصي.", true);
+                }
             } finally {
-                hideLoading();
+                // Hide skeletons just in case
+                profileHeaderContent.classList.remove('hidden');
+                profileHeaderSkeleton.classList.add('hidden');
             }
         }
 
         function renderProfileComplaints(complaints) {
-            profileComplaintsList.innerHTML = '';
+            profileComplaintsList.innerHTML = ''; // Clear skeletons
             if (complaints.length === 0) {
-                profileComplaintsList.innerHTML = `<p class="text-center text-slate-500">لم يقم هذا المستخدم بنشر أي شكاوى.</p>`;
+                profileComplaintsList.innerHTML = `<p class="text-center text-slate-500">لم يقم هذا المستخدم بنشر أي شكاوى علنية.</p>`;
                 return;
             }
 
@@ -1726,22 +2052,19 @@
                 const card = document.createElement('div');
                 card.className = 'bg-slate-50 p-4 rounded-lg border border-slate-200';
                 const timeAgo = complaint.createdAt ? timeDifference(Date.now(), complaint.createdAt.toDate()) : '...';
-                const score = (complaint.upvotes || 0) - (complaint.downvotes || 0);
-                const isAnon = complaint.isAnonymous;
 
                 card.innerHTML = `
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-sm font-semibold text-teal-700">${getCategoryName(complaint.category)}</span>
-                        ${isAnon ? '<span class="text-xs bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">نشر كمجهول</span>' : ''}
                     </div>
                     <p class="text-slate-800">${complaint.description.substring(0, 150)}...</p>
                     <div class="flex justify-between items-center mt-3 text-sm text-slate-500">
                         <span>${timeAgo}</span>
                         <div class="flex gap-4">
-                            <span><i class="fa-solid fa-thumbs-up ml-1"></i> ${complaint.upvotes || 0}</span>
-                            <span><i class="fa-solid fa-thumbs-down ml-1"></i> ${complaint.downvotes || 0}</span>
+                            <span><i class="fa-solid fa-thumbs-up ms-1"></i> ${complaint.upvotes || 0}</span>
+                            <span><i class="fa-solid fa-thumbs-down ms-1"></i> ${complaint.downvotes || 0}</span>
                             <a href="#complaint-detail?id=${complaint.id}" class="page-link font-semibold text-teal-600 hover:text-teal-800">
-                                عرض التفاصيل <i class="fa-solid fa-arrow-left mr-1"></i>
+                                عرض التفاصيل <i class="fa-solid fa-arrow-left me-1"></i>
                             </a>
                         </div>
                     </div>
@@ -1752,13 +2075,38 @@
 
 
         // --- Init ---
+
+        function populateDropdowns() {
+            // REMOVED: Governorates
+
+            // Map Legend
+            mapLegend.innerHTML = '';
+            Object.keys(CATEGORIES).forEach(key => {
+                const item = CATEGORIES[key];
+                const li = document.createElement('li');
+                li.className = 'flex items-center gap-2';
+                li.innerHTML = `
+                    <span class="w-3 h-3 rounded-full" style="background-color: ${item.color}; border: 1px solid rgba(0,0,0,0.2)"></span>
+                    <span>${item.name}</span>
+                `;
+                mapLegend.appendChild(li);
+            });
+        }
+
         window.addEventListener('hashchange', handleHashChange);
+        profileLogoutBtn.addEventListener('click', () => signOut(auth)); // NEW
+
         // Set grecaptcha when it loads
         window.onload = () => {
             if (window.grecaptcha) {
                 grecaptcha = window.grecaptcha;
             }
         };
+
+        // --- App Start ---
+        // REMOVED: initTheme()
+        populateDropdowns();
+
         // Trigger initial check
         const initialHash = window.location.hash;
         window.location.hash = ''; // Clear hash
