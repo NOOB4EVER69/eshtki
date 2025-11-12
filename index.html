@@ -780,7 +780,7 @@
         const profileAgreeCount = document.getElementById('profile-agree-count');
         const profileDisagreeCount = document.getElementById('profile-disagree-count');
         const profileComplaintsList = document.getElementById('profile-complaints-list');
-        const profileLogoutBtn = document.getElementById('profile-logout-btn'); // NEW
+        
 
 
         // --- Utility Functions ---
@@ -2094,7 +2094,7 @@
         }
 
         window.addEventListener('hashchange', handleHashChange);
-        profileLogoutBtn.addEventListener('click', () => signOut(auth)); // NEW
+       
 
         // Set grecaptcha when it loads
         window.onload = () => {
@@ -2117,5 +2117,6 @@
 
     </script>
 </body>
+
 
 </html>
